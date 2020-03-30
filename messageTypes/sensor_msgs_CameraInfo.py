@@ -27,7 +27,7 @@ so the resulting dict is populated by the following fields:
     std_msgs/Header header
     uint32 height
     uint32 width
-    string distortion_model - actually not storing this for now, just checking that it's "plumb_bob"
+    string distortion_model
     <following as numpy matrices of the appropriate dimensions>
     float64[] D (distortion params)
     float64[9] K (Intrinsic camera matrix)

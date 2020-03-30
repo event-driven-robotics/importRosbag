@@ -16,6 +16,8 @@ For example, from the CameraInfo message type we import only a single message be
 However this code should serve as a model for anyone who wishes to import rosbags.
 Although it's possible to import messages programmatically given only the message definition files, we have chosen not to do this, because if we did it we would anyway want to take the resulting data and pick out the bits we wanted. 
 
+Timestamps: We are converting timestamps to 64-bit floats. This won't work for you if you care about sub-microsecond precision, for any timestamps encoded as unix time. 
+
 Example usage:
 
 ```
@@ -41,6 +43,11 @@ topics = importRosbag(filePathOrName=filePathOrName, importTopics=importTopics)
 importTypes = ['esim_msgs_OpticFlow', 'geometry_msgs/PoseStamped']
 topics = importRosbag(filePathOrName=filePathOrName, importTypes=importTypes)
 ```
+
+Dependencies:
+
+numpy
+tqdm
 
 
 
