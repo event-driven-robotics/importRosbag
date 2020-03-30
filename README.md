@@ -1,14 +1,13 @@
 # importRosbag
-Import rosbag data - standalone - no ROS installation required.
+Import rosbag data - pure python - standalone - no ROS installation required.
 
 the importRosbag function unpacks a rosbag (path supplied by the filePathOrName parameter) into its topics and messages. 
 It then uses the topic types to interpret the messages from each topic, yielding dicts for each topic, each containing an iterable for each field.
-By default unpacks all topics, but you can use any of the following keyword 
-params to limit which topics are intepretted:
+By default it unpacks all topics for which it has a messageType definition, but you can use one of the following keyword params to limit which topics are intepretted:
 
-* 'listTopics' = True - no unpacking - just returns a list of the topics contained in the file and their associated types
-* 'importTopics' = <list of strings> - only imports the listed topics
-* 'importTypes' = <list of strings> - only imports the listed types
+* 'listTopics' = True - no unpacking - just returns a list of the topics contained in the file and their associated types - use this to quickly inspect the contents of a bag;
+* 'importTopics' = <list of strings> - only imports the listed topics;
+* 'importTypes' = <list of strings> - only imports the listed types.
 
 Message types supported are strictly those listed in the initial imports section of this file.
 There are a selection of standard message types and a couple related to event-based sensors. 
@@ -16,4 +15,32 @@ The method of importation is honed to the particular needs of the author, someti
 For example, from the CameraInfo message type we import only a single message because we're not currently interested in autocalibration or its results.
 However this code should serve as a model for anyone who wishes to import rosbags.
 Although it's possible to import messages programmatically given only the message definition files, we have chosen not to do this, because if we did it we would anyway want to take the resulting data and pick out the bits we wanted. 
+
+Example usage:
+
+```
+import os, sys
+prefix = 'C:/' if os.name == 'nt' else '/home/sbamford/'    
+sys.path.append(os.path.join(prefix, 'repos/importRosbag'))
+
+from importRosbag import importRosbag
+
+filePathOrName = os.path.join(prefix, 'data/rpg/shapes_rotation.bag')
+
+# Import everything
+topics = importRosbag(filePathOrName=filePathOrName)
+
+# Or just list the topics in the bag
+topics = importRosbag(filePathOrName=filePathOrName, listTopics=True)
+
+# Or just import one particular topic
+importTopics = ['/dvs/camera_info']
+topics = importRosbag(filePathOrName=filePathOrName, importTopics=importTopics)
+
+# Or just import two particular types - Note that slash and underscore are interchangable
+importTypes = ['esim_msgs_OpticFlow', 'geometry_msgs/PoseStamped']
+topics = importRosbag(filePathOrName=filePathOrName, importTypes=importTypes)
+```
+
+
 
