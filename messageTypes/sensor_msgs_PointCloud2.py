@@ -21,16 +21,20 @@ In some cases, static info is repeated in each message; in which case a field ma
 
 This function imports the ros message type defined at:
 http://docs.ros.org/api/sensor_msgs/html/msg/PointCloud2.html
+
+For simplicity, we're currently directly unpacking the format that we are 
+encountering in the data, which is x,y,z,_,rgb,_,_,_ 
+each as 32-bit little-endian floats
 """
 
 #%%
 
-from struct import unpack
+
 from tqdm import tqdm
 import numpy as np
 
 from .common import unpackRosString, unpackRosUint8, unpackRosUint32, \
-                    unpackRosFloat32, unpackRosTimestamp
+                    unpackRosTimestamp
 
 def importTopic(msgs, **kwargs):
     '''
@@ -43,115 +47,53 @@ def importTopic(msgs, **kwargs):
         mag (3 cols)
         temp (1 cols) - but I'll probably ignore this to start with
     '''
-    numEvents = 0
-    sizeOfArray = 1024
-    tsAll = np.zeros((sizeOfArray), dtype=np.float64)
     #tempAll = np.zeros((sizeOfArray, 1), dtype=np.float64)
     #for msg in tqdm(msgs, position=0, leave=True):
-    for msg in msgs:
+    tsByMessage = []
+    pointsByMessage = []
+    for msg in tqdm(msgs):
         
         data = msg['data']
         ptr = 0
         seq, ptr = unpackRosUint32(data, ptr)
-        time, ptr = unpackRosTimestamp(data, ptr)
+        ts, ptr = unpackRosTimestamp(data, ptr)
         frame_id, ptr = unpackRosString(data, ptr)
         height, ptr = unpackRosUint32(data, ptr)
         width, ptr = unpackRosUint32(data, ptr) 
 
-        print('len')
-        print(len(data))
-        print(seq)
-        print(time)
-        print(frame_id)
-        print(height)
-        print(width)
-        print()
+        if width > 0 and height > 0:
 
-        ptr +=4 # There's an IP address in there, not sure why
-        name, ptr = unpackRosString(data, ptr)
-        offset, ptr = unpackRosUint32(data, ptr)
-        datatype, ptr = unpackRosUint8(data, ptr)
-        count, ptr = unpackRosUint32(data, ptr)
-        print('name')
-        print(name)
-        print('ptr')
-        print(ptr)
-        print('offset')
-        print(offset)
-        print(datatype)
-        print(count)
-        print()
-
-        name, ptr = unpackRosString(data, ptr)
-        offset, ptr = unpackRosUint32(data, ptr)
-        datatype, ptr = unpackRosUint8(data, ptr)
-        count, ptr = unpackRosUint32(data, ptr)
-        print('name')
-        print(name)
-        print('ptr')
-        print(ptr)
-        print('offset')
-        print(offset)
-        print(datatype)
-        print(count)
-        print()
-
-        name, ptr = unpackRosString(data, ptr)
-        offset, ptr = unpackRosUint32(data, ptr)
-        datatype, ptr = unpackRosUint8(data, ptr)
-        count, ptr = unpackRosUint32(data, ptr)
-        print('name')
-        print(name)
-        print('ptr')
-        print(ptr)
-        print('offset')
-        print(offset)
-        print(datatype)
-        print(count)
-        print()
-
-        name, ptr = unpackRosString(data, ptr)
-        offset, ptr = unpackRosUint32(data, ptr)
-        datatype, ptr = unpackRosUint8(data, ptr)
-        count, ptr = unpackRosUint32(data, ptr)
-        print('name')
-        print(name)
-        print('ptr')
-        print(ptr)
-        print('offset')
-        print(offset)
-        print(datatype)
-        print(count)
-        print()
-
-
-        isBigendian, ptr = unpackRosUint8(data, ptr)
-        pointStep, ptr = unpackRosUint32(data, ptr)
-        rowStep, ptr = unpackRosUint32(data, ptr)
-        print(isBigendian)
-        print(pointStep)
-        print(rowStep)
-        print('ptr')
-        print(ptr)
-        print()
-
-        x, ptr = unpackRosFloat32(data, ptr)
-        print(x)
-        y, ptr = unpackRosFloat32(data, ptr)
-        print(y)
-        z, ptr = unpackRosFloat32(data, ptr)
-        print(z)
-        rgb, ptr = unpackRosFloat32(data, ptr)
-        print(rgb)
-        print()
+            arraySize, ptr = unpackRosUint32(data, ptr)
+            for element in range(arraySize):
+                # Move through the field definitions - we'll ignore these
+                # until we encounter a file that uses a different set
+                name, ptr = unpackRosString(data, ptr)
+                offset, ptr = unpackRosUint32(data, ptr)
+                datatype, ptr = unpackRosUint8(data, ptr)
+                count, ptr = unpackRosUint32(data, ptr)
         
-        break
+            isBigendian, ptr = unpackRosUint8(data, ptr)
+            pointStep, ptr = unpackRosUint32(data, ptr)
+            rowStep, ptr = unpackRosUint32(data, ptr)
 
-        numEvents += 1
+            numPoints = width * height
+            points = np.empty((numPoints, 3), dtype=np.float32)
+            arraySize, ptr = unpackRosUint32(data, ptr)
+            # assert arraySize = width*height
+            for x in range(width):
+                for y in range(height):            
+                    points[x*height + y, :] = np.frombuffer(data[ptr:ptr+12], dtype=np.float32)
+                    ptr += 32 
+            pointsByMessage.append(points)
+            tsByMessage.append(np.ones((numPoints), dtype=np.float64) * ts)
+    if not pointsByMessage: # None of the messages contained any points
+        return None
+    points = np.concatenate(pointsByMessage)        
+    ts = np.concatenate(tsByMessage)        
+    
     # Crop arrays to number of events
-    tsAll = tsAll[:numEvents]
     outDict = {
-        'ts': tsAll,
-
+        'ts': ts,
+        'points': points,
         }
     return outDict

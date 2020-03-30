@@ -42,56 +42,26 @@ so the resulting dict is populated by the following fields:
 
 #%%
 
-import numpy as np
-
 from .common import unpackRosString, unpackRosUint32, unpackRosFloat64Array
-
-def unpackKRP(data, outDict, ptr):
-    outDict['K'], ptr = unpackRosFloat64Array(data, 9, ptr)
-    outDict['K'].reshape(3, 3)
-    outDict['R'], ptr = unpackRosFloat64Array(data, 9, ptr)
-    outDict['R'].reshape(3, 3)
-    outDict['P'], ptr = unpackRosFloat64Array(data, 12, ptr)
-    outDict['P'].reshape(3, 4)
-    return ptr
 
 def importTopic(msgs, **kwargs):
 
     outDict = {}
-    data = msgs[0]['data'] # There is one calibration msg per frame. Just use the first one
+    data = msgs[0]['data'] # There is one calibration msg per frame. 
+    # Just use the first one
     #seq = unpack('=L', data[0:4])[0]
     #timeS, timeNs = unpack('=LL', data[4:12])
     frame_id, ptr = unpackRosString(data, 12)
     outDict['height'], ptr = unpackRosUint32(data, ptr)
     outDict['width'], ptr = unpackRosUint32(data, ptr)
     outDict['distortionModel'], ptr = unpackRosString(data, ptr)
-    ptr +=4 # There's an IP address in there, not sure why
-    ptrAfterDistortionModel = ptr
-    if outDict['distortionModel'] == 'plumb_bob':
-        try:
-            outDict['D'], ptr = unpackRosFloat64Array(data, 5, ptr)
-            ptr = unpackKRP(data, outDict, ptr)
-        except ValueError:
-            # It can happen, if camera has no distortion, that D is left out
-            ptr = ptrAfterDistortionModel
-            outDict['D'] = np.zeros((5), dtype=np.float64)
-            ptr = unpackKRP(data, outDict, ptr)
-    elif outDict['distortionModel'] == 'Kannala Brandt4':
-        outDict['D'], ptr = unpackRosFloat64Array(data, 4, ptr)
-        ptr = unpackKRP(data, outDict, ptr)
-    else:
-        #print('Distortion model not supported:' + outDict['distortionModel'])
-        #return None
-        # simulated data doesn't have a distortion model name, so try again like this
-        frame_id, ptr = unpackRosString(data, 12)
-        outDict['height'], ptr = unpackRosUint32(data, ptr)
-        outDict['width'], ptr = unpackRosUint32(data, ptr)
-        outDict['D'], ptr = unpackRosFloat64Array(data, 5, ptr)
-        outDict['K'], ptr = unpackRosFloat64Array(data, 9, ptr)
-        outDict['K'].reshape(3, 3)
-        outDict['R'], ptr = unpackRosFloat64Array(data, 9, ptr)
-        outDict['R'].reshape(3, 3)
-        outDict['P'], ptr = unpackRosFloat64Array(data, 12, ptr)
-        outDict['P'].reshape(3, 4)
+    numElementsInD, ptr = unpackRosUint32(data, ptr)
+    outDict['D'], ptr = unpackRosFloat64Array(data, numElementsInD, ptr)
+    outDict['K'], ptr = unpackRosFloat64Array(data, 9, ptr)
+    outDict['K'].reshape(3, 3)
+    outDict['R'], ptr = unpackRosFloat64Array(data, 9, ptr)
+    outDict['R'].reshape(3, 3)
+    outDict['P'], ptr = unpackRosFloat64Array(data, 12, ptr)
+    outDict['P'].reshape(3, 4)
     # Ignore binning and ROI
     return outDict

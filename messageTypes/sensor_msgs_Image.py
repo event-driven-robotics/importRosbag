@@ -25,7 +25,6 @@ http://docs.ros.org/api/sensor_msgs/html/msg/Image.html
 
 #%%
 
-from struct import unpack
 from tqdm import tqdm
 import numpy as np
 
@@ -57,17 +56,30 @@ def importTopic(msgs, **kwargs):
         isBigendian, ptr = unpackRosUint8(data, ptr)
         if isBigendian:
             print('data is bigendian, but it doesn''t matter')            
-        ptr += 4 #step = unpack('=L', data[ptr:ptr+4])[0]
-        # I don't know why, but there is an ip address in the next 4 bytes
-        ptr += 4
+        step, ptr = unpackRosUint32(data, ptr) # not used
+        arraySize, ptr = unpackRosUint32(data, ptr)
+        # assert arraySize == height*width
+        
+        # The pain of writing this scetion will continue to increase until it
+        # matches this reference implementation:
+        # http://docs.ros.org/jade/api/sensor_msgs/html/image__encodings_8h_source.html
         if fmtString in ['mono8', '8UC1']:
             frameData = np.frombuffer(data[ptr:ptr+height*width],np.uint8)
+            depth = 1
         elif fmtString == '32FC1':
             frameData = np.frombuffer(data[ptr:ptr+height*width*4],np.float32)
+            depth = 1
+        elif fmtString == 'bgr8':
+            frameData = np.frombuffer(data[ptr:ptr+height*width*3],np.uint8)
+            depth = 3 
         else:
             print('image format not supported:' + fmtString)
             return None
-        frameData = frameData.reshape(height, width)
+        if depth > 1:
+            frameData = frameData.reshape(height, width, depth)
+        else:
+            frameData = frameData.reshape(height, width)
+            
         framesAll.append(frameData)
     numEvents = idx + 1
     # Crop arrays to number of events

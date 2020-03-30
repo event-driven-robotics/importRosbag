@@ -12,11 +12,9 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 You should have received a copy of the GNU General Public License along with 
 this program. If not, see <https://www.gnu.org/licenses/>.
 
-TTOOOOOODOOOOOO: Transform needs unwrap timestamps? Why?>
-
 Unpacks a rosbag into its topics and messages
 Uses the topic types to interpret the messages from each topic, 
-yielding dicts for each topic containing iterators for each field.
+yielding dicts for each topic containing iterables for each field.
 By default unpacks all topics, but you can use any of the following keyword 
 params to limit which topics are intepretted:
     - 'listTopics' = True - no unpacking - just returns a list of the topics contained in 
@@ -24,63 +22,16 @@ params to limit which topics are intepretted:
     - 'importTopics' = <list of strings> - only imports the listed topics
     - 'importTypes' = <list of strings> - only imports the listed types
 
+Message types supported are strictly those listed in the initial imports section
+of this file. There are a selection of standard message types and a couple
+related to event-based sensors. 
+The method of importation is honed to the particular needs of
+the author, sometimes ignoring certain fields, grouping data in particular ways 
+etc. However it should serve as a model for anyone who wishes to import rosbags.
+Although it's possible to import messages programmatically given only the 
+message definition files, we have chosen not to do this, because if we did it
+we would anyway need to take the resulting data and pick out the bits we wanted. 
 
-importRpgDvsRos function first uses importRosbag  function, 
-which is a completely standard function to import a rosbag file,
-resulting in a dictionary of conns (connections contained in the file), 
-each containing 'msgs', a list of messages. 
-This does not attempt interpretation of the messages. 
-importRpgDvsRos then takes any connection which is of recognised types, and
-uses only these messages to output an importedDict, in the format defined for importAe.
-
-In particular, this supports the dvs_msgs/EventArray messages defined at:
-http://rpg.ifi.uzh.ch/davis_data.html
-
-It also supports some standard ros types:
-    sensor_msgs/Image, 
-    sensor_msgs/CameraInfo, (calibration)
-    sensor_msgs/Imu 
-    geometry_msgs/PoseStamped 
-    
-Return nested dicts of the form:
-{
-    info
-    data
-        0
-            dvs
-                "pol": numpy array of bool
-                "x": numpy array of uint16
-                "y": numpy array of uint16
-                "ts": numpy array of float - seconds (basic format is int with unit increments of 80 ns) 
-            frame ...
-            imu ...
-            etc ...
-            
-The function requires a template input to tell it which connections to map
-to which channels and datatypes in the resulting dict. 
-Here follow 2 example templates:
-    
-template = {
-    'left': {
-        'dvs': '/davis/left/events',
-    }, 'right': {
-        'dvs': '/davis/right/events',
-        }
-    }    
-    
-template = {
-    'ch0': {
-        'dvs': '/dvs/events',
-        'frame': '/dvs/image_raw',
-        'pose6q': '/optitrack/davis',
-        'cam': '/dvs/camera_info',
-        'imu': '/dvs/imu'
-        }
-    }    
-
-Any connections which are not named in the template are not imported but simply listed.
-To just inspect the connections, pass in an empty template (or just don't pass in the template parameter)
-Use this to inspect a new .bag file before defining the import template.
 """
 
 #%%
@@ -88,7 +39,6 @@ Use this to inspect a new .bag file before defining the import template.
 from struct import unpack
 from struct import error as structError
 from tqdm import tqdm
-import numpy as np
 
 # Local imports
 
@@ -107,16 +57,20 @@ from messageTypes.sensor_msgs_PointCloud2 import importTopic as import_sensor_ms
 def importTopic(topic, **kwargs):
     msgs = topic['msgs']
     topicType = topic['type'].replace('/','_')
-    if topicType == 'dvs_msgs_EventArray': return import_dvs_msgs_EventArray(msgs, **kwargs)
-    if topicType == 'esim_msgs_OpticFlow': return import_esim_msgs_OpticFlow(msgs, **kwargs)
-    if topicType == 'geometry_msgs_PoseStamped': return import_geometry_msgs_PoseStamped(msgs, **kwargs)
-    if topicType == 'geometry_msgs_Transform': return import_geometry_msgs_Transform(msgs, **kwargs)
-    if topicType == 'geometry_msgs_TwistStamped': return import_geometry_msgs_TwistStamped(msgs, **kwargs)
-    if topicType == 'sensor_msgs_CameraInfo': return import_sensor_msgs_CameraInfo(msgs, **kwargs)
-    if topicType == 'sensor_msgs_Image': return import_sensor_msgs_Image(msgs, **kwargs)
-    if topicType == 'sensor_msgs_Imu': return import_sensor_msgs_Imu(msgs, **kwargs)
-    if topicType == 'sensor_msgs_PointCloud2': return import_sensor_msgs_PointCloud2(msgs, **kwargs)
-    return None
+    if topicType == 'dvs_msgs_EventArray': topicDict = import_dvs_msgs_EventArray(msgs, **kwargs)
+    elif topicType == 'esim_msgs_OpticFlow': topicDict = import_esim_msgs_OpticFlow(msgs, **kwargs)
+    elif topicType == 'geometry_msgs_PoseStamped': topicDict = import_geometry_msgs_PoseStamped(msgs, **kwargs)
+    elif topicType == 'geometry_msgs_Transform': topicDict = import_geometry_msgs_Transform(msgs, **kwargs)
+    elif topicType == 'geometry_msgs_TwistStamped': topicDict = import_geometry_msgs_TwistStamped(msgs, **kwargs)
+    elif topicType == 'sensor_msgs_CameraInfo': topicDict = import_sensor_msgs_CameraInfo(msgs, **kwargs)
+    elif topicType == 'sensor_msgs_Image': topicDict = import_sensor_msgs_Image(msgs, **kwargs)
+    elif topicType == 'sensor_msgs_Imu': topicDict = import_sensor_msgs_Imu(msgs, **kwargs)
+    elif topicType == 'sensor_msgs_PointCloud2': topicDict = import_sensor_msgs_PointCloud2(msgs, **kwargs)
+    else: 
+        return None
+    if topicDict:
+        topicDict['rosbagType'] = topic['type']
+    return topicDict
 
 def readFile(filePathOrName):
     print('Attempting to import ' + filePathOrName + ' as a rosbag 2.0 file.')
@@ -251,11 +205,12 @@ def importRosbag(filePathOrName, **kwargs):
                         del topics[topicInFile]            
     elif importTypes is not None:
         for typeToImport in importTypes:
+            typeToImport = typeToImport.replace('/', '_')
             for topicInFile in list(topics.keys()):
-                if topics[topicInFile]['type'] == typeToImport:
+                if topics[topicInFile]['type'].replace('/', '_') == typeToImport:
                     importedTopic = importTopic(topics[topicInFile], **kwargs)
                     if importedTopic is not None:
-                        importedTopics[topicInFile] 
+                        importedTopics[topicInFile] = importedTopic
                         del topics[topicInFile]    
     else: # import everything
         for topicInFile in list(topics.keys()):
@@ -264,104 +219,19 @@ def importRosbag(filePathOrName, **kwargs):
                 importedTopics[topicInFile] = importedTopic
                 del topics[topicInFile]
 
+    print()
     if importedTopics:
         print('Topics imported are:')
         for topic in importedTopics.keys():
-            print(topic)        
+            print(topic + ' --- ' + importedTopics[topic]['rosbagType'])
+            #del importedTopics[topic]['rosbagType']
+        print()
 
     if topics:
         print('Topics not imported are:')
         for topic in topics.keys():
-            print(topic)     
+            print(topic + ' --- ' + topics[topic]['type'])
+        print()
     
-        return importedTopics
+    return importedTopics
 
-    '''
-    # post processing
-    # jointly rezero for all channels
-    if kwargs.get('zeroTimestamps', True):
-        # Optional: start the timestamps at zero for the first event
-        # This is done collectively for all the concurrent imports
-        rezeroTimestampsForImportedDicts(outDict)
-    # report the remaining topics
-    remainingTopics = topics.keys()
-    if remainingTopics:
-        print('The following topics are present in the file but were not imported: ')
-        for topic in remainingTopics:
-            print(topic)
-    # if cam and dvs exist in the same channel, apply height and width to dimY/X
-    #for channelKey in outDict['data'].keys():
-    #    utiliseCameraInfoWithinChannel(outDict['data'][channelKey])
-    return outDict
-    '''
-    
-    '''   
-
-    numEvents = 0
-    sizeOfArray = 1024
-    tsAll = np.zeros((sizeOfArray), dtype=np.float64)
-    chAll = np.zeros((sizeOfArray), dtype=np.uint8)
-    xAll = np.zeros((sizeOfArray), dtype=np.uint16)
-    yAll = np.zeros((sizeOfArray), dtype=np.uint16)
-    polAll = np.zeros((sizeOfArray), dtype=np.bool)
-    '''
-        
-#%% OBSOLETE:
-    
-'''
-def utiliseCameraInfoWithinChannel(channelDict):
-    if 'cam' in channelDict and 'height' in channelDict['cam']:
-        if 'dvs' in channelDict and 'dimY' not in channelDict['dvs']:
-            channelDict['dvs']['dimX'] = channelDict['cam']['width']
-            channelDict['dvs']['dimY'] = channelDict['cam']['height']
-'''            
-
-'''
-    #Handling template
-
-    template = kwargs.get('template', {})
-    # The template becomes the data branch of the importedDict
-    outDict = {
-        'info': kwargs,
-        'data': {}
-            }            
-    for channelKey in template:
-        print('Importing for channel : ', channelKey)
-        channelKeyStripped = str(channelKey).translate(str.maketrans('', '', string.punctuation))
-        outDict['data'][channelKeyStripped] = {}
-        for dataType in template[channelKey]:
-            topic = template[channelKey][dataType]
-            topic = topics.pop(topic)
-            msgs = topic['msgs']
-            print('Importing for dataType "' + dataType + '"; there are ' + str(len(msgs)) + ' messages')
-            if dataType == 'dvs':
-                # Interpret these messages as EventArray
-                outDict['data'][channelKeyStripped][dataType] = interpretMsgsAsDvs(msgs, **kwargs)
-            elif dataType == 'pose6q':
-                outDict['data'][channelKeyStripped][dataType] = interpretMsgsAsPose6q(msgs, **kwargs)
-            elif dataType == 'frame':
-                outDict['data'][channelKeyStripped][dataType] = interpretMsgsAsFrame(msgs, **kwargs)
-            elif dataType == 'cam':
-                outDict['data'][channelKeyStripped][dataType] = interpretMsgsAsCam(msgs, **kwargs)
-            elif dataType == 'imu':
-                outDict['data'][channelKeyStripped][dataType] = interpretMsgsAsImu(msgs, **kwargs)
-            else:
-                print('dataType "', dataType, '" not recognised.')
-        if getOrInsertDefault(kwargs, 'zeroTimestamps', True):
-            # Optional: start the timestamps at zero for the first event
-            # This is done collectively for all the concurrent imports
-            zeroTimestampsForAChannel(outDict['data'][channelKeyStripped])
-'''
-
-'''
-def unpackRosUint32(data, ptr):
-    return unpack('=L', data[ptr:ptr+4])[0], ptr+4
-
-def unpackRosString(data, ptr):
-    stringLen = unpack('=L', data[ptr:ptr+4])[0]
-    ptr += 4
-    outStr = data[ptr:ptr+stringLen].decode('utf-8')
-    ptr += stringLen
-    return outStr, ptr
-
-'''

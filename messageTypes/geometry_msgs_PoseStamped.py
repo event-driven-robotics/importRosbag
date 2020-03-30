@@ -21,6 +21,11 @@ In some cases, static info is repeated in each message; in which case a field ma
 
 This function imports the ros message type defined at:    
 http://docs.ros.org/melodic/api/geometry_msgs/html/msg/PoseStamped.html
+
+The result is a ts plus a 7-column np array of np.float64,
+where the cols are x, y, z, q-w, q-x, q-y, q-z, (i.e. quaternion orientation)
+
+NOTE: QUATERNION ORDER GETS MODIFIED from xyzw to wxyz
 """
 
 #%%
@@ -32,12 +37,6 @@ import numpy as np
 from .common import unpackRosString, unpackRosTimestamp, unpackRosFloat64Array
 
 def importTopic(msgs, **kwargs):
-    '''
-    ros message is defined here:
-        http://docs.ros.org/api/geometry_msgs/html/msg/PoseStamped.html
-    the result is a ts plus a 7-column np array of np.float64,
-    where the cols are x, y, z, q-w, q-x, q-y, q-z, (i.e. quaternion orientation)
-    '''
     #if 'Stamped' not in kwargs.get('messageType', 'Stamped'):
     #    return interpretMsgsAsPose6qAlt(msgs, **kwargs)
     sizeOfArray = 1024
