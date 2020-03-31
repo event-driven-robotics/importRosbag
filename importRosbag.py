@@ -42,17 +42,17 @@ from tqdm import tqdm
 
 # Local imports
 
-from messageTypes.common import unpackHeader
+from .messageTypes.common import unpackHeader
 
-from messageTypes.dvs_msgs_EventArray import importTopic as import_dvs_msgs_EventArray
-from messageTypes.esim_msgs_OpticFlow import importTopic as import_esim_msgs_OpticFlow
-from messageTypes.geometry_msgs_PoseStamped import importTopic as import_geometry_msgs_PoseStamped
-from messageTypes.geometry_msgs_Transform import importTopic as import_geometry_msgs_Transform
-from messageTypes.geometry_msgs_TwistStamped import importTopic as import_geometry_msgs_TwistStamped
-from messageTypes.sensor_msgs_CameraInfo import importTopic as import_sensor_msgs_CameraInfo
-from messageTypes.sensor_msgs_Image import importTopic as import_sensor_msgs_Image
-from messageTypes.sensor_msgs_Imu import importTopic as import_sensor_msgs_Imu
-from messageTypes.sensor_msgs_PointCloud2 import importTopic as import_sensor_msgs_PointCloud2
+from .messageTypes.dvs_msgs_EventArray import importTopic as import_dvs_msgs_EventArray
+from .messageTypes.esim_msgs_OpticFlow import importTopic as import_esim_msgs_OpticFlow
+from .messageTypes.geometry_msgs_PoseStamped import importTopic as import_geometry_msgs_PoseStamped
+from .messageTypes.geometry_msgs_Transform import importTopic as import_geometry_msgs_Transform
+from .messageTypes.geometry_msgs_TwistStamped import importTopic as import_geometry_msgs_TwistStamped
+from .messageTypes.sensor_msgs_CameraInfo import importTopic as import_sensor_msgs_CameraInfo
+from .messageTypes.sensor_msgs_Image import importTopic as import_sensor_msgs_Image
+from .messageTypes.sensor_msgs_Imu import importTopic as import_sensor_msgs_Imu
+from .messageTypes.sensor_msgs_PointCloud2 import importTopic as import_sensor_msgs_PointCloud2
 
 def importTopic(topic, **kwargs):
     msgs = topic['msgs']
