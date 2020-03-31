@@ -25,7 +25,6 @@ https://github.com/uzh-rpg/rpg_dvs_ros/tree/master/dvs_msgs/msg
 
 #%%
 
-from struct import unpack
 from tqdm import tqdm
 import numpy as np
 
@@ -34,12 +33,11 @@ import numpy as np
 from .common import unpackRosString, unpackRosUint32
 
 def importTopic(msgs, **kwargs):
-    numEvents = 0
-    sizeOfArray = 1024
-    tsAll = np.zeros((sizeOfArray), dtype=np.float64)
-    xAll = np.zeros((sizeOfArray), dtype=np.uint16)
-    yAll = np.zeros((sizeOfArray), dtype=np.uint16)
-    polAll = np.zeros((sizeOfArray), dtype=np.bool)
+
+    tsByMessage = []
+    xByMessage = []
+    yByMessage = []
+    polByMessage = []
     for msg in tqdm(msgs, position=0, leave=True):
         # TODO: maybe implement kwargs['useRosMsgTimestamps']
         data = msg['data']
@@ -49,31 +47,28 @@ def importTopic(msgs, **kwargs):
         height, ptr = unpackRosUint32(data, ptr)
         width, ptr = unpackRosUint32(data, ptr) 
         numEventsInMsg, ptr = unpackRosUint32(data, ptr)
-        while sizeOfArray < numEvents + numEventsInMsg:
-            tsAll = np.append(tsAll, np.zeros((sizeOfArray), dtype=np.float64))
-            xAll = np.append(xAll, np.zeros((sizeOfArray), dtype=np.uint16))
-            yAll = np.append(yAll, np.zeros((sizeOfArray), dtype=np.uint16))
-            polAll = np.append(polAll, np.zeros((sizeOfArray), dtype=np.bool))
-            sizeOfArray *= 2
-        for idx in range(numEventsInMsg):
-            x, y, ts, tns, pol = unpack('=HHLL?', data[ptr + idx*13 : ptr + (idx + 1)*13])
-            idxAll = idx + numEvents
-            tsFloat = np.float64(ts)+np.float64(tns)*0.000000001 # It's possible that this will kilL the precision
-            xAll[idxAll] = x
-            yAll[idxAll] = y
-            tsAll[idxAll] = tsFloat
-            polAll[idxAll] = pol
-        numEvents += numEventsInMsg
-    # Crop arrays to number of events
-    tsAll = tsAll[:numEvents]
-    xAll = xAll[:numEvents]
-    yAll = yAll[:numEvents]
-    polAll = polAll[:numEvents]
+        # The format of the event is x=Uint16, y=Uint16, ts = Uint32, tns (nano seconds) = Uint32, pol=Bool  
+        # Unpack in batch into uint8 and then compose
+        dataAsArray = np.frombuffer(data[ptr:ptr+numEventsInMsg*13], dtype=np.uint8)
+        dataAsArray = dataAsArray.reshape((-1, 13), order='C')
+        # Assuming big-endian
+        xByMessage.append((dataAsArray[:, 0] + dataAsArray[:, 1] * 2**8).astype(np.uint16))
+        yByMessage.append((dataAsArray[:, 2] + dataAsArray[:, 3] * 2**8).astype(np.uint16))
+        ts = ((dataAsArray[:, 4] + \
+              dataAsArray[:, 5] * 2**8 + \
+              dataAsArray[:, 6] * 2**16 + \
+              dataAsArray[:, 7] * 2**24 ).astype(np.float64))
+        tns = ((dataAsArray[:, 8] + \
+               dataAsArray[:, 9] * 2**8 + \
+               dataAsArray[:, 10] * 2**16 + \
+               dataAsArray[:, 11] * 2**24).astype(np.float64))
+        tsByMessage.append(ts + tns / 1000000000) # Combine timestamp parts, result is in seconds
+        polByMessage.append(dataAsArray[:, 12].astype(np.bool))
     outDict = {
-        'x': xAll,
-        'y': yAll,
-        'ts': tsAll,
-        'pol': polAll,
+        'x': np.concatenate(xByMessage),
+        'y': np.concatenate(yByMessage),
+        'ts': np.concatenate(tsByMessage),
+        'pol': np.concatenate(polByMessage),
         'dimX': width,
         'dimY': height}
     return outDict

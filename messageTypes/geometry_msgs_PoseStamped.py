@@ -30,7 +30,6 @@ NOTE: QUATERNION ORDER GETS MODIFIED from xyzw to wxyz
 
 #%%
 
-from struct import unpack
 from tqdm import tqdm
 import numpy as np
 
