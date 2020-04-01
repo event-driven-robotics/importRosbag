@@ -75,8 +75,8 @@ topics = importRosbag(filePathOrName=filePathOrName, importTypes=importTypes)
 
 Dependencies:
 
-numpy
-tqdm
+* numpy
+* tqdm
 
 
 
