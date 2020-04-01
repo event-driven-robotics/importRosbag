@@ -7,7 +7,7 @@ A rosbag consists of a set of topics, each of which has a set of messages.
 A topic has a name, which was defined by the creator, and a message type, which
 defines the content of each message. 
 This function uses the topic types to interpret the messages from each topic, 
-yielding oner dict for each topic. Each dict contains an iterable for each data 
+yielding one dict for each topic. Each dict contains an iterable for each data 
 field.
 By default this function unpacks all topics for which it has a message type 
 definition, but you can use one of the following keyword params to limit which 
