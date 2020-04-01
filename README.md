@@ -17,10 +17,24 @@ topics are intepretted:
 * 'importTopics' = <list of strings> - only imports the listed topics;
 * 'importTypes' = <list of strings> - only imports the listed types.
 
-Message types supported are strictly those listed in the initial imports section 
-of this file.
-There are a selection of standard message types and a couple related to event-based 
-sensors. 
+Message types supported are a selection of standard message types and a couple 
+related to event-based sensors:
+
+Standard:
+
+* geometry_msgs/PoseStamped
+* geometry_msgs/Transform
+* geometry_msgs/TwistStamped
+* sensor_msgs/CameraInfo
+* sensor_msgs/Image
+* sensor_msgs/Imu
+* sensor_msgs/PointCloud2
+
+Specialised:
+
+* dvs_msgs/EventArray
+* esim_msgs/OpticFlow
+
 The method of importation is honed to the particular needs of the author, 
 sometimes ignoring certain fields, grouping data in particular ways etc. 
 For example, from the CameraInfo message type we import only a single message 
