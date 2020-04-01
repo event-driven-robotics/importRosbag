@@ -134,7 +134,7 @@ def readFile(filePathOrName):
                 connFields.update(fields) 
                 connFields['conn'] = unpack('=l', connFields['conn'])[0]
                 connFields['topic'] = connFields['topic'].decode("utf-8")
-                connFields['type'] = connFields['type'].decode("utf-8")
+                connFields['type'] = connFields['type'].decode("utf-8").replace('/', '_')
                 conns.append(connFields)
     return conns, chunks
 

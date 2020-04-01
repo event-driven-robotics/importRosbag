@@ -94,6 +94,6 @@ def importTopic(msgs, **kwargs):
     # Crop arrays to number of events
     outDict = {
         'ts': ts,
-        'points': points,
+        'point': points,
         }
     return outDict
