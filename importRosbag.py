@@ -48,11 +48,13 @@ from .messageTypes.dvs_msgs_EventArray import importTopic as import_dvs_msgs_Eve
 from .messageTypes.esim_msgs_OpticFlow import importTopic as import_esim_msgs_OpticFlow
 from .messageTypes.geometry_msgs_PoseStamped import importTopic as import_geometry_msgs_PoseStamped
 from .messageTypes.geometry_msgs_Transform import importTopic as import_geometry_msgs_Transform
+from .messageTypes.geometry_msgs_TransformStamped import importTopic as import_geometry_msgs_TransformStamped
 from .messageTypes.geometry_msgs_TwistStamped import importTopic as import_geometry_msgs_TwistStamped
 from .messageTypes.sensor_msgs_CameraInfo import importTopic as import_sensor_msgs_CameraInfo
 from .messageTypes.sensor_msgs_Image import importTopic as import_sensor_msgs_Image
 from .messageTypes.sensor_msgs_Imu import importTopic as import_sensor_msgs_Imu
 from .messageTypes.sensor_msgs_PointCloud2 import importTopic as import_sensor_msgs_PointCloud2
+from .messageTypes.tf_tfMessage import importTopic as import_tf_tfMessage
 
 def importTopic(topic, **kwargs):
     msgs = topic['msgs']
@@ -61,11 +63,13 @@ def importTopic(topic, **kwargs):
     elif topicType == 'esim_msgs_OpticFlow': topicDict = import_esim_msgs_OpticFlow(msgs, **kwargs)
     elif topicType == 'geometry_msgs_PoseStamped': topicDict = import_geometry_msgs_PoseStamped(msgs, **kwargs)
     elif topicType == 'geometry_msgs_Transform': topicDict = import_geometry_msgs_Transform(msgs, **kwargs)
+    elif topicType == 'geometry_msgs_TransformStamped': topicDict = import_geometry_msgs_TransformStamped(msgs, **kwargs)
     elif topicType == 'geometry_msgs_TwistStamped': topicDict = import_geometry_msgs_TwistStamped(msgs, **kwargs)
     elif topicType == 'sensor_msgs_CameraInfo': topicDict = import_sensor_msgs_CameraInfo(msgs, **kwargs)
     elif topicType == 'sensor_msgs_Image': topicDict = import_sensor_msgs_Image(msgs, **kwargs)
     elif topicType == 'sensor_msgs_Imu': topicDict = import_sensor_msgs_Imu(msgs, **kwargs)
     elif topicType == 'sensor_msgs_PointCloud2': topicDict = import_sensor_msgs_PointCloud2(msgs, **kwargs)
+    elif topicType == 'tf_tfMessage': topicDict = import_tf_tfMessage(msgs, **kwargs)
     else: 
         return None
     if topicDict:

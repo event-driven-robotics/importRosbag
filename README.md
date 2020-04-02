@@ -24,11 +24,13 @@ Standard:
 
 * geometry_msgs/PoseStamped
 * geometry_msgs/Transform
+* geometry_msgs/TransformStamped
 * geometry_msgs/TwistStamped
 * sensor_msgs/CameraInfo
 * sensor_msgs/Image
 * sensor_msgs/Imu
 * sensor_msgs/PointCloud2
+* tf/tfMessage
 
 Specialised:
 

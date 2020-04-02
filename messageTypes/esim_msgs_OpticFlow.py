@@ -29,8 +29,8 @@ https://github.com/uzh-rpg/rpg_esim/blob/master/event_camera_simulator/esim_msgs
 from tqdm import tqdm
 import numpy as np
 
-from .common import unpackRosFloat32Array, unpackRosUint32, unpackRosTimestamp, \
-                    unpackRosString, unpackRosIpAddress
+from .common import unpackRosFloat32Array, unpackRosUint32, \
+                    unpackRosTimestamp, unpackRosString
 
 def importTopic(msgs, **kwargs):
 
