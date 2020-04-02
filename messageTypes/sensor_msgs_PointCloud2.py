@@ -91,6 +91,9 @@ def importTopic(msgs, **kwargs):
     points = np.concatenate(pointsByMessage)        
     ts = np.concatenate(tsByMessage)        
     
+    # Points are in mm - convert to m
+    points = points / 1000
+    
     # Crop arrays to number of events
     outDict = {
         'ts': ts,
