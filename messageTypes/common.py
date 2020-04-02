@@ -43,9 +43,6 @@ def unpackRosUint32(data, ptr):
 def unpackRosUint8(data, ptr):
     return unpack('=B', data[ptr:ptr+1])[0], ptr+1
 
-def unpackRosIpAddress(data, ptr):
-    return unpack('=BBBB', data[ptr:ptr+4]), ptr+4
-
 def unpackRosString(data, ptr):
     stringLen = unpack('=L', data[ptr:ptr+4])[0]
     ptr += 4
