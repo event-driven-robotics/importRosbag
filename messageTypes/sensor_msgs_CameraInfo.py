@@ -58,10 +58,10 @@ def importTopic(msgs, **kwargs):
     numElementsInD, ptr = unpackRosUint32(data, ptr)
     outDict['D'], ptr = unpackRosFloat64Array(data, numElementsInD, ptr)
     outDict['K'], ptr = unpackRosFloat64Array(data, 9, ptr)
-    outDict['K'].reshape(3, 3)
+    outDict['K'] = outDict['K'].reshape(3, 3)
     outDict['R'], ptr = unpackRosFloat64Array(data, 9, ptr)
-    outDict['R'].reshape(3, 3)
+    outDict['R'] = outDict['R'].reshape(3, 3)
     outDict['P'], ptr = unpackRosFloat64Array(data, 12, ptr)
-    outDict['P'].reshape(3, 4)
+    outDict['P'] = outDict['P'].reshape(3, 4)
     # Ignore binning and ROI
     return outDict
