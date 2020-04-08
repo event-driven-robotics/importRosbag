@@ -46,21 +46,27 @@ def importTopic(msgs, **kwargs):
     sizeOfArray = 1024
     tsAll = np.zeros((sizeOfArray), dtype=np.float64)
     poseAll = np.zeros((sizeOfArray, 7), dtype=np.float64)
+    frameIdAll = []
+    childFrameIdAll = []
     idx = 0
     for msg in tqdm(msgs, position=0, leave=True):
         data = msg['data']
         numTfInMsg, ptr = unpackRosUint32(data, 0)
-        while sizeOfArray <= idx + numTfInMsg:
-            tsAll = np.append(tsAll, np.zeros((sizeOfArray), dtype=np.float64))
-            poseAll = np.concatenate((poseAll, np.zeros((sizeOfArray, 7), dtype=np.float64)))
-            sizeOfArray *= 2
-        seq, ptr = unpackRosUint32(data, ptr)
-        tsAll[idx], ptr = unpackRosTimestamp(data, ptr)
-        frame_id, ptr = unpackRosString(data, ptr)
-        poseAll[idx, :], _ = unpackRosFloat64Array(data, 7, ptr)
-        idx += 1
+        for tfIdx in range(numTfInMsg): 
+            while sizeOfArray <= idx + numTfInMsg:
+                tsAll = np.append(tsAll, np.zeros((sizeOfArray), dtype=np.float64))
+                poseAll = np.concatenate((poseAll, np.zeros((sizeOfArray, 7), dtype=np.float64)))
+                sizeOfArray *= 2
+            seq, ptr = unpackRosUint32(data, ptr)
+            tsAll[idx], ptr = unpackRosTimestamp(data, ptr)
+            frame_id, ptr = unpackRosString(data, ptr)
+            frameIdAll.append(frame_id)
+            child_frame_id, ptr = unpackRosString(data, ptr)
+            childFrameIdAll.append(child_frame_id)
+            poseAll[idx, :], ptr = unpackRosFloat64Array(data, 7, ptr)
+            idx += 1
     # Crop arrays to number of events
-    numEvents = idx + 1
+    numEvents = idx
     tsAll = tsAll[:numEvents]
     poseAll = poseAll[:numEvents]
     point = poseAll[:, 0:3]
@@ -68,5 +74,7 @@ def importTopic(msgs, **kwargs):
     outDict = {
         'ts': tsAll,
         'point': point,
-        'rotation': rotation}
+        'rotation': rotation,
+        'frameId': np.array(frameIdAll, dtype='object'),
+        'childFrameId': np.array(childFrameIdAll, dtype='object')}
     return outDict

@@ -46,7 +46,10 @@ def unpackRosUint8(data, ptr):
 def unpackRosString(data, ptr):
     stringLen = unpack('=L', data[ptr:ptr+4])[0]
     ptr += 4
-    outStr = data[ptr:ptr+stringLen].decode('utf-8')
+    try:
+        outStr = data[ptr:ptr+stringLen].decode('utf-8')
+    except UnicodeDecodeError:
+        outStr = 'UnicodeDecodeError'
     ptr += stringLen
     return outStr, ptr
 
