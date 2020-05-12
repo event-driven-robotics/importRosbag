@@ -49,6 +49,10 @@ anyway want to take the resulting data and pick out the bits we wanted.
 Timestamps: We are converting timestamps to 64-bit floats. This won't work for you 
 if you care about sub-microsecond precision, for any timestamps encoded as unix time. 
 
+Quaternions: Attention! We import quaternions in the form w,x,y,z, which is the 
+convention in certain software, like blender; however, in the rosbag, the native  
+form is x,y,z,w. 
+
 Example usage:
 
 ```
