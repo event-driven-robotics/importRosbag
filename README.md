@@ -1,14 +1,26 @@
 # importRosbag
 Import rosbag data - pure python - standalone - no ROS installation required.
 
-the importRosbag function imports a .rosbag file - path supplied by the 
-filePathOrName parameter. 
+The importRosbag function imports a .rosbag file. Use the 'filePathOrName' 
+parameter to supply the path. e.g. 
+
+```
+import os
+from importRosbag.importRosbag import importRosbag
+
+prefix = 'C:/' if os.name == 'nt' else '/home/sbamford/'    
+filePathOrName = os.path.join(prefix, 'data/rpg/shapes_rotation.bag')
+
+topics = importRosbag(filePathOrName=filePathOrName)
+```
+
 A rosbag consists of a set of topics, each of which has a set of messages.
 A topic has a name, which was defined by the creator, and a message type, which
-defines the content of each message. 
+is standard and defines the content of each message. 
 This function uses the topic types to interpret the messages from each topic, 
-yielding one dict for each topic. Each dict contains an iterable for each data 
-field.
+yielding one dict for each topic. Each of these dicts contains an iterable for 
+each data field.
+
 By default this function unpacks all topics for which it has a message type 
 definition, but you can use one of the following keyword params to limit which 
 topics are intepretted:
@@ -17,7 +29,25 @@ topics are intepretted:
 * 'importTopics' = <list of strings> - only imports the listed topics;
 * 'importTypes' = <list of strings> - only imports the listed types.
 
-Message types supported are a selection of standard message types and a couple 
+Example usage:
+
+```
+# Import everything
+topics = importRosbag(filePathOrName=filePathOrName)
+
+# Or just list the topics in the bag
+topics = importRosbag(filePathOrName=filePathOrName, listTopics=True)
+
+# Or just import one particular topic
+importTopics = ['/dvs/camera_info']
+topics = importRosbag(filePathOrName=filePathOrName, importTopics=importTopics)
+
+# Or just import two particular types - Note that slash and underscore are interchangable
+importTypes = ['esim_msgs_OpticFlow', 'geometry_msgs/PoseStamped']
+topics = importRosbag(filePathOrName=filePathOrName, importTypes=importTypes)
+```
+
+Message types supported are a selection of standard message types, plus a couple 
 related to event-based sensors:
 
 Standard:
@@ -54,36 +84,9 @@ quaternions, e.g. PoseStamped/Transform/TransformStamped/tfMessage: we import
 quaternions in the form w,x,y,z, which is the convention in certain software, 
 like blender; however, in the rosbag, the native form is x,y,z,w. 
 
-Example usage:
-
-```
-import os, sys
-prefix = 'C:/' if os.name == 'nt' else '/home/sbamford/'    
-sys.path.append(os.path.join(prefix, 'repos/importRosbag'))
-
-from importRosbag import importRosbag
-
-filePathOrName = os.path.join(prefix, 'data/rpg/shapes_rotation.bag')
-
-# Import everything
-topics = importRosbag(filePathOrName=filePathOrName)
-
-# Or just list the topics in the bag
-topics = importRosbag(filePathOrName=filePathOrName, listTopics=True)
-
-# Or just import one particular topic
-importTopics = ['/dvs/camera_info']
-topics = importRosbag(filePathOrName=filePathOrName, importTopics=importTopics)
-
-# Or just import two particular types - Note that slash and underscore are interchangable
-importTypes = ['esim_msgs_OpticFlow', 'geometry_msgs/PoseStamped']
-topics = importRosbag(filePathOrName=filePathOrName, importTypes=importTypes)
-```
 
 Dependencies:
 
 * numpy
 * tqdm
-
-
 
