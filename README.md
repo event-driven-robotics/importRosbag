@@ -5,13 +5,9 @@ The importRosbag function imports a .rosbag file. Use the 'filePathOrName'
 parameter to supply the path. e.g. 
 
 ```
-import os
 from importRosbag.importRosbag import importRosbag
 
-prefix = 'C:/' if os.name == 'nt' else '/home/sbamford/'    
-filePathOrName = os.path.join(prefix, 'data/rpg/shapes_rotation.bag')
-
-topics = importRosbag(filePathOrName=filePathOrName)
+topics = importRosbag(filePathOrName='path/to/data.bag')
 ```
 
 A rosbag consists of a set of topics, each of which has a set of messages.
@@ -33,18 +29,18 @@ Example usage:
 
 ```
 # Import everything
-topics = importRosbag(filePathOrName=filePathOrName)
+topics = importRosbag(filePathOrName='path/to/data.bag')
 
 # Or just list the topics in the bag
-topics = importRosbag(filePathOrName=filePathOrName, listTopics=True)
+topics = importRosbag(filePathOrName='path/to/data.bag', listTopics=True)
 
 # Or just import one particular topic
 importTopics = ['/dvs/camera_info']
-topics = importRosbag(filePathOrName=filePathOrName, importTopics=importTopics)
+topics = importRosbag(filePathOrName='path/to/data.bag', importTopics=importTopics)
 
 # Or just import two particular types - Note that slash and underscore are interchangable
 importTypes = ['esim_msgs_OpticFlow', 'geometry_msgs/PoseStamped']
-topics = importRosbag(filePathOrName=filePathOrName, importTypes=importTypes)
+topics = importRosbag(filePathOrName='path/to/data.bag', importTypes=importTypes)
 ```
 
 Message types supported are a selection of standard message types, plus a couple 
