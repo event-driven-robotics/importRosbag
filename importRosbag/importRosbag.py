@@ -129,8 +129,14 @@ def readFile(filePathOrName):
                 chunks.append(fields)
                 pbar.update(len(chunks))
             elif op == 6:
-                # It's a chunk-info - seems to be redundant
-                pass
+                # It's a chunk-info
+                ver = unpack('<L', data[:4])
+                chunk_pos = unpack('<Q', fields['chunk_pos'])[0]
+                start_time = unpack('<Q', fields['start_time'])[0]
+                end_time = unpack('<Q', fields['end_time'])[0]
+                count = unpack('<L', fields['count'])[0]
+                for i in range(count):
+                    conn_id, msg_count = unpack('<LL', data[i*8:i*8+8])
             elif op == 7:
                 # It's a conn
                 # interpret data as a string containing the connection header
