@@ -76,7 +76,7 @@ def importTopic(topic, **kwargs):
         topicDict['rosbagType'] = topic['type']
     return topicDict
 
-def readFile(filePathOrName):
+def readFile(filePathOrName, loading_data=True):
     print('Attempting to import ' + filePathOrName + ' as a rosbag 2.0 file.')
     with open(filePathOrName, 'rb') as file:
         # File format string
@@ -87,6 +87,7 @@ def readFile(filePathOrName):
         eof = False
         conns = []
         chunks = []
+        chunk_infos_idx = 0
         while not eof:
             # Read a record header
             try:
@@ -105,6 +106,7 @@ def readFile(filePathOrName):
             # The op code tells us what to do with the record
             op = unpack('=b', fields['op'])[0]
             fields['op'] = op
+            fields['data_file'] = filePathOrName
             if op == 2:
                 # It's a message
                 # AFAIK these are not found unpacked in the file
@@ -124,19 +126,21 @@ def readFile(filePathOrName):
                     chunks[-1]['ids'].append((conn, time, offset))
             elif op == 5:
                 # It's a chunk
-                fields['data'] = data
+                if loading_data:
+                    fields['data'] = data
                 fields['ids'] = []
                 chunks.append(fields)
                 pbar.update(len(chunks))
             elif op == 6:
                 # It's a chunk-info
-                ver = unpack('<L', data[:4])
-                chunk_pos = unpack('<Q', fields['chunk_pos'])[0]
-                start_time = unpack('<Q', fields['start_time'])[0]
-                end_time = unpack('<Q', fields['end_time'])[0]
+                chunks[chunk_infos_idx]['ver'] = unpack('<L', fields['ver'])[0]
+                chunks[chunk_infos_idx]['chunk_pos'] = unpack('<Q', fields['chunk_pos'])[0]
+                chunks[chunk_infos_idx]['start_time'] = unpack('<Q', fields['start_time'])[0]
+                chunks[chunk_infos_idx]['end_time'] = unpack('<Q', fields['end_time'])[0]
                 count = unpack('<L', fields['count'])[0]
                 for i in range(count):
                     conn_id, msg_count = unpack('<LL', data[i*8:i*8+8])
+                chunk_infos_idx += 1
             elif op == 7:
                 # It's a conn
                 # interpret data as a string containing the connection header
@@ -155,6 +159,13 @@ def breakChunksIntoMsgs(chunks):
     print('Breaking chunks into msgs ...')           
     for chunk in tqdm(chunks, position=0, leave=True):
         for idx in chunk['ids']:
+            if not 'data' in chunk.keys():
+                with open(chunk['data_file'], 'rb') as f:
+                    f.seek(chunk['chunk_pos'])
+                    headerLen = unpack('=l', f.read(4))[0]
+                    f.read(headerLen)
+                    chunk['data'] = f.read(unpack('<l', chunk['size'])[0])
+
             ptr = idx[2]
             headerLen = unpack('=l', chunk['data'][ptr:ptr+4])[0]
             ptr += 4
