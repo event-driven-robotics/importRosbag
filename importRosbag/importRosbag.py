@@ -76,7 +76,7 @@ def importTopic(topic, **kwargs):
         topicDict['rosbagType'] = topic['type']
     return topicDict
 
-def readFile(filePathOrName, loading_data=True):
+def readFile(filePathOrName):
     print('Attempting to import ' + filePathOrName + ' as a rosbag 2.0 file.')
     with open(filePathOrName, 'rb') as file:
         # File format string
@@ -126,8 +126,6 @@ def readFile(filePathOrName, loading_data=True):
                     chunks[-1]['ids'].append((conn, time, offset))
             elif op == 5:
                 # It's a chunk
-                if loading_data:
-                    fields['data'] = data
                 fields['ids'] = []
                 chunks.append(fields)
                 pbar.update(len(chunks))
@@ -135,12 +133,12 @@ def readFile(filePathOrName, loading_data=True):
                 # It's a chunk-info
                 chunks[chunk_infos_idx]['ver'] = unpack('<L', fields['ver'])[0]
                 chunks[chunk_infos_idx]['chunk_pos'] = unpack('<Q', fields['chunk_pos'])[0]
-                chunks[chunk_infos_idx]['start_time'] = unpack('<Q', fields['start_time'])[0]
-                chunks[chunk_infos_idx]['end_time'] = unpack('<Q', fields['end_time'])[0]
+                chunks[chunk_infos_idx]['start_time'] = unpack('<LL', fields['start_time'])
+                chunks[chunk_infos_idx]['end_time'] = unpack('<LL', fields['end_time'])
                 count = unpack('<L', fields['count'])[0]
                 for i in range(count):
-                    conn_id, msg_count = unpack('<LL', data[i*8:i*8+8])
-                chunk_infos_idx += 1
+                    conn_id, msg_count = unpack('<LL', data[i*8:i*8+8]) # TODO I don't know what use to make of these
+                chunk_infos_idx += 1 # Chunk infos appear at the end of the bag one per chunk
             elif op == 7:
                 # It's a conn
                 # interpret data as a string containing the connection header
@@ -155,30 +153,30 @@ def readFile(filePathOrName, loading_data=True):
 #%% Break chunks into msgs
 
 def breakChunksIntoMsgs(chunks):
-    msgs = [] 
+    msgs = []
     print('Breaking chunks into msgs ...')           
     for chunk in tqdm(chunks, position=0, leave=True):
         for idx in chunk['ids']:
-            if not 'data' in chunk.keys():
-                with open(chunk['data_file'], 'rb') as f:
-                    f.seek(chunk['chunk_pos'])
-                    headerLen = unpack('=l', f.read(4))[0]
-                    f.read(headerLen)
-                    chunk['data'] = f.read(unpack('<l', chunk['size'])[0])
+            with open(chunk['data_file'], 'rb') as f:
+                f.seek(chunk['chunk_pos'])
+                headerLen = unpack('=l', f.read(4))[0]
+                f.read(headerLen)
+                data_len_with_header = unpack('<l', f.read(4))[0] - idx[2]
+                f.read(idx[2])
 
-            ptr = idx[2]
-            headerLen = unpack('=l', chunk['data'][ptr:ptr+4])[0]
-            ptr += 4
-            # unpack the header into fields 
-            headerBytes = chunk['data'][ptr:ptr+headerLen]
-            ptr += headerLen
-            fields = unpackHeader(headerLen, headerBytes)
-            # Read the record data
-            dataLen = unpack('=l', chunk['data'][ptr:ptr+4])[0]
-            ptr += 4
-            fields['data'] = chunk['data'][ptr:ptr+dataLen]
-            fields['conn'] = unpack('=l', fields['conn'])[0]
-            msgs.append(fields)
+                headerLen = unpack('=l', f.read(4))[0]
+                # unpack the header into fields
+                headerBytes = f.read(headerLen)
+                fields = unpackHeader(headerLen, headerBytes)
+                # Read the record data
+                data_len = unpack('=l', f.read(4))[0]
+                fields['conn'] = unpack('=l', fields['conn'])[0]
+                fields['chunk_pos'] = chunk['chunk_pos']
+                fields['start_time'] = chunk['start_time']
+                fields['end_time'] = chunk['end_time']
+                fields['data_pos'] = f.tell()
+                fields['data_len'] = data_len
+                msgs.append(fields)
     return msgs
 
 def rekeyConnsByTopic(connDict):
@@ -189,7 +187,7 @@ def rekeyConnsByTopic(connDict):
 
 
 def importRosbag(filePathOrName, **kwargs):
-    print('Importing file: ', filePathOrName) 
+    print('Importing file: ', filePathOrName)
     conns, chunks = readFile(filePathOrName)
     # Restructure conns as a dictionary keyed by conn number
     connDict = {}
@@ -212,7 +210,23 @@ def importRosbag(filePathOrName, **kwargs):
     for msg in msgs:     
         connDict[msg['conn']]['msgs'].append(msg)
     topics = rekeyConnsByTopic(connDict)
+    filtered_topics = load_batch_at_time(topics, 0, 5) # TODO move this function call somewhere else. At the moment we are reading the first 5 secs of data
+    importedTopics = import_all_topics(filtered_topics, kwargs)
 
+    return importedTopics
+
+def load_batch_at_time(topics, start_time, end_time):
+    filtered_topics = {}
+    for topic in topics:
+        with open(topics[topic]['data_file'], 'rb') as f:
+            filtered_topics[topic] = {k: topics[topic][k] for k in topics[topic].keys() - {'msgs'}}
+            filtered_topics[topic]['msgs'] = [d for d in topics[topic]['msgs'] if end_time > d['start_time'][0] > start_time]
+            for msg in filtered_topics[topic]['msgs']:
+                f.seek(msg['data_pos'])
+                msg['data'] = f.read(msg['data_len'])
+    return filtered_topics
+
+def import_all_topics(topics, kwargs):
     importedTopics = {}
     importTopics = kwargs.get('importTopics')
     importTypes = kwargs.get('importTypes')
@@ -223,7 +237,7 @@ def importRosbag(filePathOrName, **kwargs):
                     importedTopic = importTopic(topics[topicInFile], **kwargs)
                     if importedTopic is not None:
                         importedTopics[topicToImport] = importedTopic
-                        del topics[topicInFile]            
+                        del topics[topicInFile]
     elif importTypes is not None:
         for typeToImport in importTypes:
             typeToImport = typeToImport.replace('/', '_')
@@ -232,27 +246,24 @@ def importRosbag(filePathOrName, **kwargs):
                     importedTopic = importTopic(topics[topicInFile], **kwargs)
                     if importedTopic is not None:
                         importedTopics[topicInFile] = importedTopic
-                        del topics[topicInFile]    
-    else: # import everything
+                        del topics[topicInFile]
+    else:  # import everything
         for topicInFile in list(topics.keys()):
             importedTopic = importTopic(topics[topicInFile], **kwargs)
             if importedTopic is not None:
                 importedTopics[topicInFile] = importedTopic
                 del topics[topicInFile]
-
     print()
     if importedTopics:
         print('Topics imported are:')
         for topic in importedTopics.keys():
             print(topic + ' --- ' + importedTopics[topic]['rosbagType'])
-            #del importedTopics[topic]['rosbagType']
+            # del importedTopics[topic]['rosbagType']
         print()
-
     if topics:
         print('Topics not imported are:')
         for topic in topics.keys():
             print(topic + ' --- ' + topics[topic]['type'])
         print()
-    
     return importedTopics
 
