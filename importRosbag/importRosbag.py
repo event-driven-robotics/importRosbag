@@ -179,6 +179,7 @@ def breakChunksIntoMsgs(chunks):
                 msgs.append(fields)
     return msgs
 
+
 def rekeyConnsByTopic(connDict):
     topics = {}
     for conn in connDict:
@@ -210,21 +211,29 @@ def importRosbag(filePathOrName, **kwargs):
     for msg in msgs:     
         connDict[msg['conn']]['msgs'].append(msg)
     topics = rekeyConnsByTopic(connDict)
-    filtered_topics = load_batch_at_time(topics, 0, 5) # TODO move this function call somewhere else. At the moment we are reading the first 5 secs of data
-    importedTopics = import_all_topics(filtered_topics, kwargs)
+    cam0pose = {'/cam0/pose' : {}}
+    cam0pose['/cam0/pose'] = topics['/cam0/pose']
+    return cam0pose
 
-    return importedTopics
 
-def load_batch_at_time(topics, start_time, end_time):
-    filtered_topics = {}
+def import_topics_at_time(topics, start_time, end_time):
+    print('From ', start_time, ' to ', end_time)
     for topic in topics:
         with open(topics[topic]['data_file'], 'rb') as f:
-            filtered_topics[topic] = {k: topics[topic][k] for k in topics[topic].keys() - {'msgs'}}
-            filtered_topics[topic]['msgs'] = [d for d in topics[topic]['msgs'] if end_time > d['start_time'][0] > start_time]
-            for msg in filtered_topics[topic]['msgs']:
-                f.seek(msg['data_pos'])
-                msg['data'] = f.read(msg['data_len'])
-    return filtered_topics
+            new_idx = []
+            deleted_idx = []
+            for idx, msg in enumerate(topics[topic]['msgs']):
+                msg_start_time = msg['start_time'][0] + msg['start_time'][1] * 1e-9
+                if end_time >= msg_start_time >= start_time:
+                    if 'data' not in msg.keys():
+                        f.seek(msg['data_pos'])
+                        msg['data'] = f.read(msg['data_len'])
+                        new_idx.append(idx)
+                elif 'data' in msg.keys():
+                    del msg['data']
+                    deleted_idx.append(idx)
+    return import_all_topics(topics, {})
+
 
 def import_all_topics(topics, kwargs):
     importedTopics = {}
@@ -252,7 +261,8 @@ def import_all_topics(topics, kwargs):
             importedTopic = importTopic(topics[topicInFile], **kwargs)
             if importedTopic is not None:
                 importedTopics[topicInFile] = importedTopic
-                del topics[topicInFile]
+                # del topics[topicInFile]
+            break
     print()
     if importedTopics:
         print('Topics imported are:')
