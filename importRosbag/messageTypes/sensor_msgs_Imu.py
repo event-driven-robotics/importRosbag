@@ -41,45 +41,43 @@ def importTopic(msgs, **kwargs):
         mag (3 cols)
         temp (1 cols) - but I'll probably ignore this to start with
     '''
-    sizeOfArray = 1024
-    tsAll = np.zeros((sizeOfArray), dtype=np.float64)
-    rotQAll = np.zeros((sizeOfArray, 4), dtype=np.float64)
-    angVAll = np.zeros((sizeOfArray, 3), dtype=np.float64)
-    accAll = np.zeros((sizeOfArray, 3), dtype=np.float64)
-    magAll = np.zeros((sizeOfArray, 3), dtype=np.float64)
+    tsAll = []
+    rotQAll = []
+    angVAll = []
+    accAll = []
+    magAll = []
+    data_start_idx = np.inf
+    data_end_idx = -np.inf
     #tempAll = np.zeros((sizeOfArray, 1), dtype=np.float64)
     for idx, msg in enumerate(tqdm(msgs, position=0, leave=True)):
-        if sizeOfArray <= idx:
-            tsAll = np.append(tsAll, np.zeros((sizeOfArray), dtype=np.float64))
-            rotQAll = np.concatenate((rotQAll, np.zeros((sizeOfArray, 4), dtype=np.float64)))
-            angVAll = np.concatenate((angVAll, np.zeros((sizeOfArray, 3), dtype=np.float64)))
-            accAll = np.concatenate((accAll, np.zeros((sizeOfArray, 3), dtype=np.float64)))
-            magAll = np.concatenate((magAll, np.zeros((sizeOfArray, 3), dtype=np.float64)))
-            sizeOfArray *= 2
         # TODO: maybe implement kwargs['useRosMsgTimestamps']
-        data = msg['data']
-        #seq = unpack('=L', data[0:4])[0]
-        tsAll[idx], ptr = unpackRosTimestamp(data, 4)
-        frame_id, ptr = unpackRosString(data, ptr)
-        rotQAll[idx, :], ptr = unpackRosFloat64Array(data, 4, ptr)
-        ptr += 72 # Skip the covariance matrix
-        angVAll[idx, :], ptr = unpackRosFloat64Array(data, 3, ptr)
-        ptr += 72 # Skip the covariance matrix
-        accAll[idx, :], ptr = unpackRosFloat64Array(data, 3, ptr)
-        #ptr += 24
-        #ptr += 72 # Skip the covariance matrix
-    numEvents = idx + 1
-    # Crop arrays to number of events
-    tsAll = tsAll[:numEvents]
-    rotQAll = rotQAll[:numEvents]
-    angVAll = angVAll[:numEvents]
-    accAll = accAll[:numEvents]
-    magAll = magAll[:numEvents]
+        try:
+            data = msg['data']
+            #seq = unpack('=L', data[0:4])[0]
+            ts_new, ptr = unpackRosTimestamp(data, 4)
+            frame_id, ptr = unpackRosString(data, ptr)
+            rotQ_new, ptr = unpackRosFloat64Array(data, 4, ptr)
+            rotQAll.append(rotQ_new)
+            ptr += 72 # Skip the covariance matrix
+            angV_new, ptr = unpackRosFloat64Array(data, 3, ptr)
+            angVAll.append(angV_new)
+            ptr += 72 # Skip the covariance matrix
+            acc_new, ptr = unpackRosFloat64Array(data, 3, ptr)
+            accAll.append(acc_new)
+            #ptr += 24
+            #ptr += 72 # Skip the covariance matrix
+            data_start_idx = min(idx, data_start_idx)
+            data_end_idx = max(idx, data_end_idx)
+        except KeyError:
+            ts_new, _ = unpackRosTimestamp(msg['time'], 0)
+        tsAll.append(ts_new)
     outDict = {
         'ts': tsAll,
         'rotQ': rotQAll,
         'angV': angVAll,
         'acc': accAll,
-        'mag': magAll
+        'mag': magAll,
+        'start_idx': data_start_idx,
+        'end_idx': data_end_idx
         }
     return outDict

@@ -31,29 +31,32 @@ from .common import unpackRosString, unpackRosTimestamp, unpackRosFloat64Array
 
 def importTopic(msgs, **kwargs):
     sizeOfArray = 1024
-    ts = np.zeros((sizeOfArray), dtype=np.float64)
-    linV = np.zeros((sizeOfArray, 3), dtype=np.float64)
-    angV = np.zeros((sizeOfArray, 3), dtype=np.float64)
+    ts = []
+    linV = []
+    angV = []
+    data_start_idx = np.inf
+    data_end_idx = -np.inf
     for idx, msg in enumerate(tqdm(msgs, position=0, leave=True)):
-        if sizeOfArray <= idx:
-            ts = np.append(ts, np.zeros((sizeOfArray), dtype=np.float64))
-            linV = np.concatenate((linV, np.zeros((sizeOfArray, 3), dtype=np.float64)))
-            angV = np.concatenate((angV, np.zeros((sizeOfArray, 3), dtype=np.float64)))
-            sizeOfArray *= 2
-        data = msg['data']
-        #seq = unpack('=L', data[0:4])[0]
-        ts[idx], ptr = unpackRosTimestamp(data, 4)
-        frame_id, ptr = unpackRosString(data, ptr)
-        linV[idx, :], ptr = unpackRosFloat64Array(data, 3, ptr)
-        angV[idx, :], _ = unpackRosFloat64Array(data, 3, ptr)
-    # Crop arrays to number of events
-    numEvents = idx + 1
-    ts = ts[:numEvents]
-    linV = linV[:numEvents]
-    angV = angV[:numEvents]
+        try:
+            data = msg['data']
+            #seq = unpack('=L', data[0:4])[0]
+            ts_new, ptr = unpackRosTimestamp(data, 4)
+            frame_id, ptr = unpackRosString(data, ptr)
+            linV_new, ptr = unpackRosFloat64Array(data, 3, ptr)
+            linV.append(linV_new)
+            angV_new, _ = unpackRosFloat64Array(data, 3, ptr)
+            data_start_idx = min(idx, data_start_idx)
+            data_end_idx = max(idx, data_end_idx)
+            angV.append(angV_new)
+        except KeyError:
+            ts_new, _ = unpackRosTimestamp(msg['time'], 0)
+        ts.append(ts_new)
+
     outDict = {
         'ts': ts,
         'linV': linV,
-        'angV': angV}
+        'angV': angV,
+        'start_idx': data_start_idx,
+        'end_idx': data_end_idx}
     return outDict
 

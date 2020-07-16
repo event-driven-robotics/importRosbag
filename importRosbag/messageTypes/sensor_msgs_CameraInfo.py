@@ -47,21 +47,26 @@ from .common import unpackRosString, unpackRosUint32, unpackRosFloat64Array
 def importTopic(msgs, **kwargs):
 
     outDict = {}
-    data = msgs[0]['data'] # There is one calibration msg per frame. 
-    # Just use the first one
-    #seq = unpack('=L', data[0:4])[0]
-    #timeS, timeNs = unpack('=LL', data[4:12])
-    frame_id, ptr = unpackRosString(data, 12)
-    outDict['height'], ptr = unpackRosUint32(data, ptr)
-    outDict['width'], ptr = unpackRosUint32(data, ptr)
-    outDict['distortionModel'], ptr = unpackRosString(data, ptr)
-    numElementsInD, ptr = unpackRosUint32(data, ptr)
-    outDict['D'], ptr = unpackRosFloat64Array(data, numElementsInD, ptr)
-    outDict['K'], ptr = unpackRosFloat64Array(data, 9, ptr)
-    outDict['K'] = outDict['K'].reshape(3, 3)
-    outDict['R'], ptr = unpackRosFloat64Array(data, 9, ptr)
-    outDict['R'] = outDict['R'].reshape(3, 3)
-    outDict['P'], ptr = unpackRosFloat64Array(data, 12, ptr)
-    outDict['P'] = outDict['P'].reshape(3, 4)
-    # Ignore binning and ROI
+    for msg in msgs:
+        try:
+            data = msg['data'] # There is one calibration msg per frame.
+            # Just use the first one
+            #seq = unpack('=L', data[0:4])[0]
+            #timeS, timeNs = unpack('=LL', data[4:12])
+            frame_id, ptr = unpackRosString(data, 12)
+            outDict['height'], ptr = unpackRosUint32(data, ptr)
+            outDict['width'], ptr = unpackRosUint32(data, ptr)
+            outDict['distortionModel'], ptr = unpackRosString(data, ptr)
+            numElementsInD, ptr = unpackRosUint32(data, ptr)
+            outDict['D'], ptr = unpackRosFloat64Array(data, numElementsInD, ptr)
+            outDict['K'], ptr = unpackRosFloat64Array(data, 9, ptr)
+            outDict['K'] = outDict['K'].reshape(3, 3)
+            outDict['R'], ptr = unpackRosFloat64Array(data, 9, ptr)
+            outDict['R'] = outDict['R'].reshape(3, 3)
+            outDict['P'], ptr = unpackRosFloat64Array(data, 12, ptr)
+            outDict['P'] = outDict['P'].reshape(3, 4)
+            # Ignore binning and ROI
+            break
+        except KeyError:
+            pass
     return outDict

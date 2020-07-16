@@ -33,31 +33,32 @@ import numpy as np
 from .common import unpackRosTimestamp, unpackRosFloat64Array
 
 def importTopic(msgs, **kwargs):
-    numEvents = 0
-    sizeOfArray = 1024
-    tsAll = np.zeros((sizeOfArray), dtype=np.float64)
-    poseAll = np.zeros((sizeOfArray, 7), dtype=np.float64)
+    tsAll = []
+    poseAll = []
+    data_start_idx = np.inf
+    data_end_idx = -np.inf
     for idx, msg in enumerate(tqdm(msgs, position=0, leave=True)):
-        if sizeOfArray <= idx:
-            tsAll = np.append(tsAll, np.zeros((sizeOfArray), dtype=np.float64))
-            poseAll = np.concatenate((poseAll, np.zeros((sizeOfArray, 7), dtype=np.float64)))
-            sizeOfArray *= 2
+        try:
+            data = msg['data']
+            new_pose, _ = unpackRosFloat64Array(data, 7, 0)
+            data_start_idx = min(idx, data_start_idx)
+            data_end_idx = max(idx, data_end_idx)
+        except KeyError:
+            pass
         # Note - ignoring kwargs['useRosMsgTimestamps'] as there is no choice
-        tsAll[idx], _ = unpackRosTimestamp(msg['time'], 0)
-        poseAll[idx, :], _ = unpackRosFloat64Array(msg['data'], 7, 0)
-    numEvents = idx + 1
-    # Crop arrays to number of events
-    tsAll = tsAll[:numEvents]
-    
+        ts_new, _ = unpackRosTimestamp(msg['time'], 0)
     ''' Needed?
     from timestamps import zeroTimestampsForAChannel, rezeroTimestampsForImportedDicts, unwrapTimestamps
     tsAll = unwrapTimestamps(tsAll) # here we could pass in wrapTime=2**62, but actually it handles this internally
     '''
-    poseAll = poseAll[:numEvents]
+    poseAll = np.array(poseAll)
     point = poseAll[:, 0:3]
     rotation = poseAll[:, [6, 3, 4, 5]] # Switch quaternion form from xyzw to wxyz
+
     outDict = {
         'ts': tsAll,
         'point': point,
-        'rotation': rotation}
+        'rotation': rotation,
+        'start_idx': data_start_idx,
+        'end_idx': data_end_idx}
     return outDict
