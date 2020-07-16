@@ -217,21 +217,16 @@ def importRosbag(filePathOrName, **kwargs):
 
 
 def import_topics_at_time(topics, start_time, end_time):
-    print('From ', start_time, ' to ', end_time)
     for topic in topics:
         with open(topics[topic]['data_file'], 'rb') as f:
-            new_idx = []
-            deleted_idx = []
             for idx, msg in enumerate(topics[topic]['msgs']):
                 msg_start_time = msg['start_time'][0] + msg['start_time'][1] * 1e-9
                 if end_time >= msg_start_time >= start_time:
                     if 'data' not in msg.keys():
                         f.seek(msg['data_pos'])
                         msg['data'] = f.read(msg['data_len'])
-                        new_idx.append(idx)
                 elif 'data' in msg.keys():
                     del msg['data']
-                    deleted_idx.append(idx)
     return import_all_topics(topics, {})
 
 

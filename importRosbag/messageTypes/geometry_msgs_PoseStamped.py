@@ -56,7 +56,6 @@ def importTopic(msgs, **kwargs):
 
         tsAll.append(ts_new)
 
-    print('Imported from indices', data_start_idx, ' to ', data_end_idx)
     poseAll = np.array(poseAll)
     point = poseAll[:, 0:3]
     rotation = poseAll[:, [6, 3, 4, 5]] # Switch quaternion form from xyzw to wxyz
