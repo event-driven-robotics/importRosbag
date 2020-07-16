@@ -211,9 +211,7 @@ def importRosbag(filePathOrName, **kwargs):
     for msg in msgs:     
         connDict[msg['conn']]['msgs'].append(msg)
     topics = rekeyConnsByTopic(connDict)
-    cam0pose = {'/cam0/pose' : {}}
-    cam0pose['/cam0/pose'] = topics['/cam0/pose']
-    return cam0pose
+    return topics
 
 
 def import_topics_at_time(topics, start_time, end_time):
@@ -257,7 +255,6 @@ def import_all_topics(topics, kwargs):
             if importedTopic is not None:
                 importedTopics[topicInFile] = importedTopic
                 # del topics[topicInFile]
-            break
     print()
     if importedTopics:
         print('Topics imported are:')
