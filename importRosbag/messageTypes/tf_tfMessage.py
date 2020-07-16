@@ -43,32 +43,35 @@ from .common import unpackRosString, unpackRosTimestamp, \
 def importTopic(msgs, **kwargs):
     #if 'Stamped' not in kwargs.get('messageType', 'Stamped'):
     #    return interpretMsgsAsPose6qAlt(msgs, **kwargs)
-    sizeOfArray = 1024
-    tsAll = np.zeros((sizeOfArray), dtype=np.float64)
-    poseAll = np.zeros((sizeOfArray, 7), dtype=np.float64)
+    tsAll = []
+    poseAll = []
+    data_start_idx = np.inf
+    data_end_idx = -np.inf
     frameIdAll = []
     childFrameIdAll = []
     idx = 0
     for msg in tqdm(msgs, position=0, leave=True):
-        data = msg['data']
-        numTfInMsg, ptr = unpackRosUint32(data, 0)
-        for tfIdx in range(numTfInMsg): 
-            while sizeOfArray <= idx + numTfInMsg:
-                tsAll = np.append(tsAll, np.zeros((sizeOfArray), dtype=np.float64))
-                poseAll = np.concatenate((poseAll, np.zeros((sizeOfArray, 7), dtype=np.float64)))
-                sizeOfArray *= 2
-            seq, ptr = unpackRosUint32(data, ptr)
-            tsAll[idx], ptr = unpackRosTimestamp(data, ptr)
-            frame_id, ptr = unpackRosString(data, ptr)
-            frameIdAll.append(frame_id)
-            child_frame_id, ptr = unpackRosString(data, ptr)
-            childFrameIdAll.append(child_frame_id)
-            poseAll[idx, :], ptr = unpackRosFloat64Array(data, 7, ptr)
+        try:
+            data = msg['data']
+            numTfInMsg, ptr = unpackRosUint32(data, 0)
+            for tfIdx in range(numTfInMsg):
+                seq, ptr = unpackRosUint32(data, ptr)
+                ts_new, ptr = unpackRosTimestamp(data, ptr)
+                tsAll.append(ts_new)
+                frame_id, ptr = unpackRosString(data, ptr)
+                frameIdAll.append(frame_id)
+                child_frame_id, ptr = unpackRosString(data, ptr)
+                childFrameIdAll.append(child_frame_id)
+                pose_new, ptr = unpackRosFloat64Array(data, 7, ptr)
+                poseAll.append(pose_new)
+                data_start_idx = min(idx, data_start_idx)
+                idx += 1
+                data_end_idx = max(idx, data_end_idx)
+        except KeyError:
+            ts_new, _ = unpackRosTimestamp(msg['time'], 0)
+            tsAll.append(ts_new)
             idx += 1
-    # Crop arrays to number of events
-    numEvents = idx
-    tsAll = tsAll[:numEvents]
-    poseAll = poseAll[:numEvents]
+    poseAll = np.array(poseAll)
     point = poseAll[:, 0:3]
     rotation = poseAll[:, [6, 3, 4, 5]] # Switch quaternion form from xyzw to wxyz
     outDict = {
@@ -76,5 +79,7 @@ def importTopic(msgs, **kwargs):
         'point': point,
         'rotation': rotation,
         'frameId': np.array(frameIdAll, dtype='object'),
-        'childFrameId': np.array(childFrameIdAll, dtype='object')}
+        'childFrameId': np.array(childFrameIdAll, dtype='object'),
+        'start_idx': data_start_idx,
+        'end_idx': data_end_idx}
     return outDict
