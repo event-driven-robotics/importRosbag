@@ -51,41 +51,52 @@ def importTopic(msgs, **kwargs):
     #for msg in tqdm(msgs, position=0, leave=True):
     tsByMessage = []
     pointsByMessage = []
+    data_start_idx = np.inf
+    data_end_idx = -np.inf
+    idx = 0
+
     for msg in tqdm(msgs):
-        
-        data = msg['data']
-        ptr = 0
-        seq, ptr = unpackRosUint32(data, ptr)
-        ts, ptr = unpackRosTimestamp(data, ptr)
-        frame_id, ptr = unpackRosString(data, ptr)
-        height, ptr = unpackRosUint32(data, ptr)
-        width, ptr = unpackRosUint32(data, ptr) 
+        try:
+            data = msg['data']
+            ptr = 0
+            seq, ptr = unpackRosUint32(data, ptr)
+            ts, ptr = unpackRosTimestamp(data, ptr)
+            frame_id, ptr = unpackRosString(data, ptr)
+            height, ptr = unpackRosUint32(data, ptr)
+            width, ptr = unpackRosUint32(data, ptr)
 
-        if width > 0 and height > 0:
+            if width > 0 and height > 0:
 
-            arraySize, ptr = unpackRosUint32(data, ptr)
-            for element in range(arraySize):
-                # Move through the field definitions - we'll ignore these
-                # until we encounter a file that uses a different set
-                name, ptr = unpackRosString(data, ptr)
-                offset, ptr = unpackRosUint32(data, ptr)
-                datatype, ptr = unpackRosUint8(data, ptr)
-                count, ptr = unpackRosUint32(data, ptr)
-        
-            isBigendian, ptr = unpackRosUint8(data, ptr)
-            pointStep, ptr = unpackRosUint32(data, ptr)
-            rowStep, ptr = unpackRosUint32(data, ptr)
+                arraySize, ptr = unpackRosUint32(data, ptr)
+                for element in range(arraySize):
+                    # Move through the field definitions - we'll ignore these
+                    # until we encounter a file that uses a different set
+                    name, ptr = unpackRosString(data, ptr)
+                    offset, ptr = unpackRosUint32(data, ptr)
+                    datatype, ptr = unpackRosUint8(data, ptr)
+                    count, ptr = unpackRosUint32(data, ptr)
 
-            numPoints = width * height
-            points = np.empty((numPoints, 3), dtype=np.float32)
-            arraySize, ptr = unpackRosUint32(data, ptr)
-            # assert arraySize = width*height
-            for x in range(width):
-                for y in range(height):            
-                    points[x*height + y, :] = np.frombuffer(data[ptr:ptr+12], dtype=np.float32)
-                    ptr += 32 
-            pointsByMessage.append(points)
-            tsByMessage.append(np.ones((numPoints), dtype=np.float64) * ts)
+                isBigendian, ptr = unpackRosUint8(data, ptr)
+                pointStep, ptr = unpackRosUint32(data, ptr)
+                rowStep, ptr = unpackRosUint32(data, ptr)
+
+                numPoints = width * height
+                points = np.empty((numPoints, 3), dtype=np.float32)
+                arraySize, ptr = unpackRosUint32(data, ptr)
+                # assert arraySize = width*height
+                for x in range(width):
+                    for y in range(height):
+                        points[x*height + y, :] = np.frombuffer(data[ptr:ptr+12], dtype=np.float32)
+                        ptr += 32
+                pointsByMessage.append(points)
+                tsByMessage.append(np.ones((numPoints), dtype=np.float64) * ts)
+                data_start_idx = min(idx, data_start_idx)
+                idx += numPoints
+                data_end_idx = max(idx, data_end_idx)
+        except KeyError:
+            tsByMessage.append([unpackRosTimestamp(msg['time'], 0)[0]])
+            idx += 1
+
     if not pointsByMessage: # None of the messages contained any points
         return None
     points = np.concatenate(pointsByMessage)        
@@ -95,5 +106,7 @@ def importTopic(msgs, **kwargs):
     outDict = {
         'ts': ts,
         'point': points,
+        'start_idx': data_start_idx,
+        'end_idx': data_end_idx
         }
     return outDict
