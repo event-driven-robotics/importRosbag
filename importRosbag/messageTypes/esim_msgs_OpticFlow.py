@@ -36,32 +36,43 @@ def importTopic(msgs, **kwargs):
 
     tsAll = []
     flowMaps = []
-    for msg in tqdm(msgs):
-        
-        data = msg['data']
-        ptr = 0
-        seq, ptr = unpackRosUint32(data, ptr) # Not used
-        ts, ptr = unpackRosTimestamp(data, ptr)
-        frame_id, ptr = unpackRosString(data, ptr) # Not used
-        height, ptr = unpackRosUint32(data, ptr)
-        width, ptr = unpackRosUint32(data, ptr) 
+    data_start_idx = np.inf
+    data_end_idx = -np.inf
+    for idx, msg in tqdm(enumerate(msgs)):
 
-        if width > 0 and height > 0:
-            arraySize, ptr = unpackRosUint32(data, ptr)
-            #assert arraySize == width*height
-            flowMapX, ptr = unpackRosFloat32Array(data, width*height, ptr)
-            arraySize, ptr = unpackRosUint32(data, ptr)
-            #assert arraySize == width*height
-            flowMapY, ptr = unpackRosFloat32Array(data, width*height, ptr)
-            flowMap = np.concatenate((flowMapX.reshape(height, width, 1), 
-                                      flowMapY.reshape(height, width, 1)), 
-                                     axis=2)
-            flowMaps.append(flowMap)
+        try:
+            data = msg['data']
+            ptr = 0
+            seq, ptr = unpackRosUint32(data, ptr) # Not used
+            ts, ptr = unpackRosTimestamp(data, ptr)
+            frame_id, ptr = unpackRosString(data, ptr) # Not used
+            height, ptr = unpackRosUint32(data, ptr)
+            width, ptr = unpackRosUint32(data, ptr)
+
+            if width > 0 and height > 0:
+                arraySize, ptr = unpackRosUint32(data, ptr)
+                #assert arraySize == width*height
+                flowMapX, ptr = unpackRosFloat32Array(data, width*height, ptr)
+                arraySize, ptr = unpackRosUint32(data, ptr)
+                #assert arraySize == width*height
+                flowMapY, ptr = unpackRosFloat32Array(data, width*height, ptr)
+                flowMap = np.concatenate((flowMapX.reshape(height, width, 1),
+                                          flowMapY.reshape(height, width, 1)),
+                                         axis=2)
+                flowMaps.append(flowMap)
+                tsAll.append(ts)
+                data_start_idx = min(idx, data_start_idx)
+                data_end_idx = max(idx, data_end_idx)
+        except KeyError:
+            ts, _ = unpackRosTimestamp(msg['time'], 0)
             tsAll.append(ts)
+
     if not tsAll:
         return None
     outDict = {
         'ts': np.array(tsAll, dtype=np.float64),
+        'start_idx': data_start_idx,
+        'end_idx': data_end_idx,
         'flowMaps': flowMaps,
         }
     return outDict
