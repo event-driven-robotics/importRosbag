@@ -39,52 +39,60 @@ def importTopic(msgs, **kwargs):
     sizeOfArray = 1024
     tsAll = np.zeros((sizeOfArray), dtype=np.float64)
     framesAll = []
+    data_start_idx = np.inf
+    data_end_idx = -np.inf
     for idx, msg in enumerate(tqdm(msgs, position=0, leave=True)):
         if sizeOfArray <= idx:
             tsAll = np.append(tsAll, np.zeros((sizeOfArray), dtype=np.float64))
-            sizeOfArray *= 2            
-        data = msg['data']
-        #seq = unpack('=L', data[0:4])[0]
-        if kwargs.get('useRosMsgTimestamps', False):
+            sizeOfArray *= 2
+        try:
+            data = msg['data']
+            if kwargs.get('useRosMsgTimestamps', False):
+                tsAll[idx], _ = unpackRosTimestamp(msg['time'], 0)
+            else:
+                tsAll[idx], _ = unpackRosTimestamp(data, 4)
+                frame_id, ptr = unpackRosString(data, 12)
+            height, ptr = unpackRosUint32(data, ptr)
+            width, ptr = unpackRosUint32(data, ptr)
+            fmtString, ptr = unpackRosString(data, ptr)
+            isBigendian, ptr = unpackRosUint8(data, ptr)
+            if isBigendian:
+                print('data is bigendian, but it doesn''t matter')
+            step, ptr = unpackRosUint32(data, ptr) # not used
+            arraySize, ptr = unpackRosUint32(data, ptr)
+            # assert arraySize == height*width
+
+            # The pain of writing this scetion will continue to increase until it
+            # matches this reference implementation:
+            # http://docs.ros.org/jade/api/sensor_msgs/html/image__encodings_8h_source.html
+            if fmtString in ['mono8', '8UC1']:
+                frameData = np.frombuffer(data[ptr:ptr+height*width],np.uint8)
+                depth = 1
+            elif fmtString == '32FC1':
+                frameData = np.frombuffer(data[ptr:ptr+height*width*4],np.float32)
+                depth = 1
+            elif fmtString == 'bgr8':
+                frameData = np.frombuffer(data[ptr:ptr+height*width*3],np.uint8)
+                depth = 3
+            else:
+                print('image format not supported:' + fmtString)
+                return None
+            if depth > 1:
+                frameData = frameData.reshape(height, width, depth)
+            else:
+                frameData = frameData.reshape(height, width)
+            framesAll.append(frameData)
+            data_start_idx = min(idx, data_start_idx)
+            data_end_idx = max(idx, data_end_idx)
+        except KeyError:
             tsAll[idx], _ = unpackRosTimestamp(msg['time'], 0)
-        else:
-            tsAll[idx], _ = unpackRosTimestamp(data, 4)
-        frame_id, ptr = unpackRosString(data, 12)
-        height, ptr = unpackRosUint32(data, ptr)
-        width, ptr = unpackRosUint32(data, ptr)
-        fmtString, ptr = unpackRosString(data, ptr)
-        isBigendian, ptr = unpackRosUint8(data, ptr)
-        if isBigendian:
-            print('data is bigendian, but it doesn''t matter')            
-        step, ptr = unpackRosUint32(data, ptr) # not used
-        arraySize, ptr = unpackRosUint32(data, ptr)
-        # assert arraySize == height*width
-        
-        # The pain of writing this scetion will continue to increase until it
-        # matches this reference implementation:
-        # http://docs.ros.org/jade/api/sensor_msgs/html/image__encodings_8h_source.html
-        if fmtString in ['mono8', '8UC1']:
-            frameData = np.frombuffer(data[ptr:ptr+height*width],np.uint8)
-            depth = 1
-        elif fmtString == '32FC1':
-            frameData = np.frombuffer(data[ptr:ptr+height*width*4],np.float32)
-            depth = 1
-        elif fmtString == 'bgr8':
-            frameData = np.frombuffer(data[ptr:ptr+height*width*3],np.uint8)
-            depth = 3 
-        else:
-            print('image format not supported:' + fmtString)
-            return None
-        if depth > 1:
-            frameData = frameData.reshape(height, width, depth)
-        else:
-            frameData = frameData.reshape(height, width)
-            
-        framesAll.append(frameData)
+       #seq = unpack('=L', data[0:4])[0]
     numEvents = idx + 1
     # Crop arrays to number of events
     tsAll = tsAll[:numEvents]
     outDict = {
         'ts': tsAll,
+        'start_idx': data_start_idx,
+        'end_idx': data_end_idx,
         'frames': framesAll}
     return outDict
