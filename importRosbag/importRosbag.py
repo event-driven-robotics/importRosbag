@@ -211,7 +211,7 @@ def importRosbag(filePathOrName, **kwargs):
     for msg in msgs:     
         connDict[msg['conn']]['msgs'].append(msg)
     topics = rekeyConnsByTopic(connDict)
-    return topics
+    return topics # TODO make it retrocompatible
 
 
 def import_topics_at_time(topics, start_time, end_time):
@@ -219,7 +219,7 @@ def import_topics_at_time(topics, start_time, end_time):
         with open(topics[topic]['data_file'], 'rb') as f:
             for idx, msg in enumerate(topics[topic]['msgs']):
                 msg_start_time = msg['start_time'][0] + msg['start_time'][1] * 1e-9
-                if end_time >= msg_start_time >= start_time:
+                if end_time >= msg_start_time >= start_time:  # TODO check if condition is correct
                     if 'data' not in msg.keys():
                         f.seek(msg['data_pos'])
                         msg['data'] = f.read(msg['data_len'])
