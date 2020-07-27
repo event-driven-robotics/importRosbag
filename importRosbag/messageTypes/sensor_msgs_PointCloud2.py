@@ -83,7 +83,7 @@ def importTopic(msgs, **kwargs):
             for x in range(width):
                 for y in range(height):            
                     points[x*height + y, :] = np.frombuffer(data[ptr:ptr+12], dtype=np.float32)
-                    ptr += 32 
+                    ptr += pointStep
             pointsByMessage.append(points)
             tsByMessage.append(np.ones((numPoints), dtype=np.float64) * ts)
     if not pointsByMessage: # None of the messages contained any points
