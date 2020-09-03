@@ -55,6 +55,7 @@ from .messageTypes.sensor_msgs_Image import importTopic as import_sensor_msgs_Im
 from .messageTypes.sensor_msgs_Imu import importTopic as import_sensor_msgs_Imu
 from .messageTypes.sensor_msgs_PointCloud2 import importTopic as import_sensor_msgs_PointCloud2
 from .messageTypes.tf_tfMessage import importTopic as import_tf_tfMessage
+from .messageTypes.vicon_Subject import importTopic as import_vicon_Subject
 
 def importTopic(topic, **kwargs):
     msgs = topic['msgs']
@@ -70,6 +71,7 @@ def importTopic(topic, **kwargs):
     elif topicType == 'sensor_msgs_Imu': topicDict = import_sensor_msgs_Imu(msgs, **kwargs)
     elif topicType == 'sensor_msgs_PointCloud2': topicDict = import_sensor_msgs_PointCloud2(msgs, **kwargs)
     elif topicType == 'tf_tfMessage': topicDict = import_tf_tfMessage(msgs, **kwargs)
+    elif topicType == 'vicon_Subject': topicDict = import_vicon_Subject(msgs, **kwargs)
     else: 
         return None
     if topicDict:
