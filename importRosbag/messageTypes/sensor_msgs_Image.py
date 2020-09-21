@@ -66,12 +66,21 @@ def importTopic(msgs, **kwargs):
         if fmtString in ['mono8', '8UC1']:
             frameData = np.frombuffer(data[ptr:ptr+height*width],np.uint8)
             depth = 1
+        elif fmtString in ['mono16', '16UC1']:
+            frameData = np.frombuffer(data[ptr:ptr+height*width*2],np.uint16)
+            depth = 1
+        elif fmtString in ['bgr8', 'rgb8']:
+            frameData = np.frombuffer(data[ptr:ptr+height*width*3],np.uint8)
+            depth = 3
+        elif fmtString in ['bgra8', 'rgba8']:
+            frameData = np.frombuffer(data[ptr:ptr+height*width*4],np.uint8)
+            depth = 4
+        elif fmtString == '16SC1':
+            frameData = np.frombuffer(data[ptr:ptr+height*width*2],np.int16)
+            depth = 1
         elif fmtString == '32FC1':
             frameData = np.frombuffer(data[ptr:ptr+height*width*4],np.float32)
             depth = 1
-        elif fmtString == 'bgr8':
-            frameData = np.frombuffer(data[ptr:ptr+height*width*3],np.uint8)
-            depth = 3 
         else:
             print('image format not supported:' + fmtString)
             return None
