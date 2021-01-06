@@ -36,10 +36,12 @@ def importTopic(msgs, **kwargs):
         http://docs.ros.org/api/sensor_msgs/html/msg/Image.html
     the result is a ts plus a 2d array of samples ()
     '''
+    disable_bar = kwargs.get('disable_bar')
+
     sizeOfArray = 1024
     tsAll = np.zeros((sizeOfArray), dtype=np.float64)
     framesAll = []
-    for idx, msg in enumerate(tqdm(msgs, position=0, leave=True)):
+    for idx, msg in enumerate(tqdm(msgs, position=0, leave=True, disable=disable_bar)):
         if sizeOfArray <= idx:
             tsAll = np.append(tsAll, np.zeros((sizeOfArray), dtype=np.float64))
             sizeOfArray *= 2            

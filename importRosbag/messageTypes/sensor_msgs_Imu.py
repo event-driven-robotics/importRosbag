@@ -41,6 +41,7 @@ def importTopic(msgs, **kwargs):
         mag (3 cols)
         temp (1 cols) - but I'll probably ignore this to start with
     '''
+    disable_bar = kwargs.get('disable_bar')
     sizeOfArray = 1024
     tsAll = np.zeros((sizeOfArray), dtype=np.float64)
     rotQAll = np.zeros((sizeOfArray, 4), dtype=np.float64)
@@ -48,7 +49,7 @@ def importTopic(msgs, **kwargs):
     accAll = np.zeros((sizeOfArray, 3), dtype=np.float64)
     magAll = np.zeros((sizeOfArray, 3), dtype=np.float64)
     #tempAll = np.zeros((sizeOfArray, 1), dtype=np.float64)
-    for idx, msg in enumerate(tqdm(msgs, position=0, leave=True)):
+    for idx, msg in enumerate(tqdm(msgs, position=0, leave=True, disable=disable_bar)):
         if sizeOfArray <= idx:
             tsAll = np.append(tsAll, np.zeros((sizeOfArray), dtype=np.float64))
             rotQAll = np.concatenate((rotQAll, np.zeros((sizeOfArray, 4), dtype=np.float64)))

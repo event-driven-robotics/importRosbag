@@ -56,6 +56,8 @@ from .messageTypes.sensor_msgs_Imu import importTopic as import_sensor_msgs_Imu
 from .messageTypes.sensor_msgs_PointCloud2 import importTopic as import_sensor_msgs_PointCloud2
 from .messageTypes.tf_tfMessage import importTopic as import_tf_tfMessage
 
+import logging
+    
 def importTopic(topic, **kwargs):
     msgs = topic['msgs']
     topicType = topic['type'].replace('/','_')
@@ -77,13 +79,14 @@ def importTopic(topic, **kwargs):
     return topicDict
 
 def readFile(filePathOrName):
-    print('Attempting to import ' + filePathOrName + ' as a rosbag 2.0 file.')
+    global disable_bar
+    logging.info('Attempting to import ' + filePathOrName + ' as a rosbag 2.0 file.')
     with open(filePathOrName, 'rb') as file:
         # File format string
         fileFormatString = file.readline().decode("utf-8")
-        print('ROSBAG file format: ' + fileFormatString)
+        logging.info('ROSBAG file format: ' + fileFormatString)
         if fileFormatString != '#ROSBAG V2.0\n':
-            print('This file format might not be supported')
+            logging.error('This file format (%s) might not be supported' % fileFormatString)
         eof = False
         conns = []
         chunks = []
@@ -114,7 +117,7 @@ def readFile(filePathOrName):
             elif op == 3:
                 # It's a bag header - use this to do progress bar for the read
                 chunkCount = unpack('=l', fields['chunk_count'])[0]
-                pbar = tqdm(total=chunkCount, position=0, leave=True)
+                pbar = tqdm(total=chunkCount, position=0, leave=True, disable=disable_bar)
             elif op == 4:
                 # It's an index - this is used to index the previous chunk
                 conn = unpack('=l', fields['conn'])[0]
@@ -145,9 +148,10 @@ def readFile(filePathOrName):
 #%% Break chunks into msgs
 
 def breakChunksIntoMsgs(chunks):
+    global disable_bar
     msgs = [] 
-    print('Breaking chunks into msgs ...')           
-    for chunk in tqdm(chunks, position=0, leave=True):
+    logging.debug('Breaking chunks into msgs ...')           
+    for chunk in tqdm(chunks, position=0, leave=True, disable=disable_bar):
         for idx in chunk['ids']:
             ptr = idx[2]
             headerLen = unpack('=l', chunk['data'][ptr:ptr+4])[0]
@@ -172,7 +176,15 @@ def rekeyConnsByTopic(connDict):
 
 
 def importRosbag(filePathOrName, **kwargs):
-    print('Importing file: ', filePathOrName) 
+    global disable_bar
+    disable_bar = kwargs.get('disable_bar')
+    loglevel = kwargs.get('log')
+    numeric_level = getattr(logging, loglevel.upper(), None)
+    if not isinstance(numeric_level, int):
+        raise ValueError('Invalid log level: %s' % loglevel)
+    logging.getLogger().setLevel(numeric_level)
+
+    logging.info('Importing file: ' + filePathOrName) 
     conns, chunks = readFile(filePathOrName)
     # Restructure conns as a dictionary keyed by conn number
     connDict = {}
@@ -181,7 +193,7 @@ def importRosbag(filePathOrName, **kwargs):
         conn['msgs'] = []
     if kwargs.get('listTopics', False):
         topics = rekeyConnsByTopic(connDict)
-        print('Topics in the file are (with types):')
+        logging.info('Topics in the file are (with types):')
         for topicKey, topic in topics.items():
             del topic['conn']
             del topic['md5sum']
@@ -189,7 +201,7 @@ def importRosbag(filePathOrName, **kwargs):
             del topic['op']
             del topic['topic']
             topic['message_definition'] = topic['message_definition'].decode("utf-8")
-            print('    ' + topicKey + ' --- ' + topic['type'])
+            logging.info('    ' + topicKey + ' --- ' + topic['type'])
         return topics
     msgs = breakChunksIntoMsgs(chunks)
     for msg in msgs:     
@@ -223,19 +235,19 @@ def importRosbag(filePathOrName, **kwargs):
                 importedTopics[topicInFile] = importedTopic
                 del topics[topicInFile]
 
-    print()
+    logging.info('')
     if importedTopics:
-        print('Topics imported are:')
+        logging.info('Topics imported are:')
         for topic in importedTopics.keys():
-            print(topic + ' --- ' + importedTopics[topic]['rosbagType'])
+            logging.info(topic + ' --- ' + importedTopics[topic]['rosbagType'])
             #del importedTopics[topic]['rosbagType']
-        print()
+        logging.info('')
 
     if topics:
-        print('Topics not imported are:')
+        logging.info('Topics not imported are:')
         for topic in topics.keys():
-            print(topic + ' --- ' + topics[topic]['type'])
-        print()
+            logging.info(topic + ' --- ' + topics[topic]['type'])
+        logging.info('')
     
     return importedTopics
 

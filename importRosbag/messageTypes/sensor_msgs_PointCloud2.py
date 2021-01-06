@@ -49,9 +49,10 @@ def importTopic(msgs, **kwargs):
     '''
     #tempAll = np.zeros((sizeOfArray, 1), dtype=np.float64)
     #for msg in tqdm(msgs, position=0, leave=True):
+    disable_bar = kwargs.get('disable_bar')
     tsByMessage = []
     pointsByMessage = []
-    for msg in tqdm(msgs):
+    for msg in tqdm(msgs, disable=disable_bar):
         
         data = msg['data']
         ptr = 0
