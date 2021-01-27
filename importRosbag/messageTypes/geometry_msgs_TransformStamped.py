@@ -40,10 +40,11 @@ from .common import unpackRosString, unpackRosTimestamp, unpackRosFloat64Array
 def importTopic(msgs, **kwargs):
     #if 'Stamped' not in kwargs.get('messageType', 'Stamped'):
     #    return interpretMsgsAsPose6qAlt(msgs, **kwargs)
+    disable_bar = kwargs.get('disable_bar')
     sizeOfArray = 1024
     tsAll = np.zeros((sizeOfArray), dtype=np.float64)
     poseAll = np.zeros((sizeOfArray, 7), dtype=np.float64)
-    for idx, msg in enumerate(tqdm(msgs, position=0, leave=True)):
+    for idx, msg in enumerate(tqdm(msgs, position=0, leave=True, disable=disable_bar)):
         if sizeOfArray <= idx:
             tsAll = np.append(tsAll, np.zeros((sizeOfArray), dtype=np.float64))
             poseAll = np.concatenate((poseAll, np.zeros((sizeOfArray, 7), dtype=np.float64)))

@@ -33,11 +33,12 @@ import numpy as np
 from .common import unpackRosTimestamp, unpackRosFloat64Array
 
 def importTopic(msgs, **kwargs):
+    disable_bar = kwargs.get('disable_bar')
     numEvents = 0
     sizeOfArray = 1024
     tsAll = np.zeros((sizeOfArray), dtype=np.float64)
     poseAll = np.zeros((sizeOfArray, 7), dtype=np.float64)
-    for idx, msg in enumerate(tqdm(msgs, position=0, leave=True)):
+    for idx, msg in enumerate(tqdm(msgs, position=0, leave=True, disable=disable_bar)):
         if sizeOfArray <= idx:
             tsAll = np.append(tsAll, np.zeros((sizeOfArray), dtype=np.float64))
             poseAll = np.concatenate((poseAll, np.zeros((sizeOfArray, 7), dtype=np.float64)))
