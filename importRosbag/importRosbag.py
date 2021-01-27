@@ -201,7 +201,7 @@ def importRosbag(filePathOrName, **kwargs):
     importTypes = kwargs.get('importTypes')
     if importTopics is not None:
         for topicToImport in importTopics:
-            for topicInFile in topics.keys():
+            for topicInFile in list(topics.keys()):
                 if topicInFile == topicToImport:
                     importedTopic = importTopic(topics[topicInFile], **kwargs)
                     if importedTopic is not None:
