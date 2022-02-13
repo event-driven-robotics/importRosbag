@@ -54,6 +54,8 @@ from .messageTypes.sensor_msgs_CameraInfo import importTopic as import_sensor_ms
 from .messageTypes.sensor_msgs_Image import importTopic as import_sensor_msgs_Image
 from .messageTypes.sensor_msgs_Imu import importTopic as import_sensor_msgs_Imu
 from .messageTypes.sensor_msgs_PointCloud2 import importTopic as import_sensor_msgs_PointCloud2
+from .messageTypes.sensor_msgs_Illuminance import importTopic as import_sensor_msgs_Illuminance
+from .messageTypes.nav_msgs_Odometry import importTopic as import_nav_msgs_Odometry
 from .messageTypes.tf_tfMessage import importTopic as import_tf_tfMessage
 
 def importTopic(topic, **kwargs):
@@ -69,6 +71,8 @@ def importTopic(topic, **kwargs):
     elif topicType == 'sensor_msgs_Image': topicDict = import_sensor_msgs_Image(msgs, **kwargs)
     elif topicType == 'sensor_msgs_Imu': topicDict = import_sensor_msgs_Imu(msgs, **kwargs)
     elif topicType == 'sensor_msgs_PointCloud2': topicDict = import_sensor_msgs_PointCloud2(msgs, **kwargs)
+    elif topicType == 'sensor_msgs_Illuminance': topicDict = import_sensor_msgs_Illuminance(msgs, **kwargs)
+    elif topicType == 'nav_msgs_Odometry': topicDict = import_nav_msgs_Odometry(msgs, **kwargs)
     elif topicType == 'tf_tfMessage': topicDict = import_tf_tfMessage(msgs, **kwargs)
     else: 
         return None
@@ -146,7 +150,7 @@ def readFile(filePathOrName):
 
 def breakChunksIntoMsgs(chunks):
     msgs = [] 
-    print('Breaking chunks into msgs ...')           
+    print('Breaking chunks into msgs ...')
     for chunk in tqdm(chunks, position=0, leave=True):
         for idx in chunk['ids']:
             ptr = idx[2]
@@ -201,7 +205,7 @@ def importRosbag(filePathOrName, **kwargs):
     importTypes = kwargs.get('importTypes')
     if importTopics is not None:
         for topicToImport in importTopics:
-            for topicInFile in topics.keys():
+            for topicInFile in list(topics.keys()):
                 if topicInFile == topicToImport:
                     importedTopic = importTopic(topics[topicInFile], **kwargs)
                     if importedTopic is not None:
