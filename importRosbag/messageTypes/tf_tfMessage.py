@@ -43,13 +43,14 @@ from .common import unpackRosString, unpackRosTimestamp, \
 def importTopic(msgs, **kwargs):
     #if 'Stamped' not in kwargs.get('messageType', 'Stamped'):
     #    return interpretMsgsAsPose6qAlt(msgs, **kwargs)
+    disable_bar = kwargs.get('disable_bar')
     sizeOfArray = 1024
     tsAll = np.zeros((sizeOfArray), dtype=np.float64)
     poseAll = np.zeros((sizeOfArray, 7), dtype=np.float64)
     frameIdAll = []
     childFrameIdAll = []
     idx = 0
-    for msg in tqdm(msgs, position=0, leave=True):
+    for msg in tqdm(msgs, position=0, leave=True, disable=disable_bar):
         data = msg['data']
         numTfInMsg, ptr = unpackRosUint32(data, 0)
         for tfIdx in range(numTfInMsg): 

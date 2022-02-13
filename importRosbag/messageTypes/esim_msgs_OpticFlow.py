@@ -33,10 +33,10 @@ from .common import unpackRosFloat32Array, unpackRosUint32, \
                     unpackRosTimestamp, unpackRosString
 
 def importTopic(msgs, **kwargs):
-
+    disable_bar = kwargs.get('disable_bar')
     tsAll = []
     flowMaps = []
-    for msg in tqdm(msgs):
+    for msg in tqdm(msgs, disable=disable_bar):
         
         data = msg['data']
         ptr = 0

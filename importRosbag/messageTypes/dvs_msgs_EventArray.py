@@ -34,11 +34,12 @@ from .common import unpackRosString, unpackRosUint32
 
 def importTopic(msgs, **kwargs):
 
+    disable_bar = kwargs.get('disable_bar')
     tsByMessage = []
     xByMessage = []
     yByMessage = []
     polByMessage = []
-    for msg in tqdm(msgs, position=0, leave=True):
+    for msg in tqdm(msgs, position=0, leave=True, disable=disable_bar):
         # TODO: maybe implement kwargs['useRosMsgTimestamps']
         data = msg['data']
         #seq = unpack('=L', data[0:4])[0]
