@@ -34,7 +34,7 @@ from tqdm import tqdm
 import numpy as np
 
 from .common import unpackRosString, unpackRosUint8, unpackRosUint32, \
-                    unpackRosTimestamp
+                    unpackRosTimestamp, unpackRosFloat32, unpackRosUint16
 
 def importTopic(msgs, **kwargs):
     '''
@@ -52,6 +52,12 @@ def importTopic(msgs, **kwargs):
     disable_bar = kwargs.get('disable_bar')
     tsByMessage = []
     pointsByMessage = []
+    timeByMessage = []
+    reflectivityByMessage = []
+    ringByMessage = []
+    noiseByMessage = []
+    rangesByMessage = []
+
     for msg in tqdm(msgs, disable=disable_bar):
         
         data = msg['data']
@@ -78,23 +84,53 @@ def importTopic(msgs, **kwargs):
             rowStep, ptr = unpackRosUint32(data, ptr)
 
             numPoints = width * height
-            points = np.empty((numPoints, 3), dtype=np.float32)
+            points = np.empty((numPoints, 4), dtype=np.float32)
+            time_arr = np.empty((numPoints,1), dtype=np.uint32)
+            reflectivity = np.empty((numPoints, 1), dtype=np.uint16)
+            ring = np.empty((numPoints, 1), dtype=np.uint8)
+            noise = np.empty((numPoints, 1), dtype=np.uint16)
+            ranges = np.empty((numPoints, 1), dtype=np.uint32)
+
             arraySize, ptr = unpackRosUint32(data, ptr)
             # assert arraySize = width*height
             for x in range(width):
                 for y in range(height):            
-                    points[x*height + y, :] = np.frombuffer(data[ptr:ptr+12], dtype=np.float32)
+                    points[x*height + y, :] = np.frombuffer(data[ptr:ptr+16], dtype=np.float32)
+                    time_arr[x*height + y, 0] = np.frombuffer(data[ptr+16:ptr+16+4], dtype=np.uint32)
+                    reflectivity[x*height + y, 0] = np.frombuffer(data[ptr+20:ptr+20+2], dtype=np.uint16)
+                    ring[x*height + y, 0] = np.frombuffer(data[ptr+22:ptr+22+1], dtype=np.uint8)
+                    noise[x*height + y, 0] = np.frombuffer(data[ptr+23:ptr+23+2], dtype=np.uint16)
+                    ranges[x*height + y, 0] = np.frombuffer(data[ptr+25:ptr+25+4], dtype=np.uint32)
+
                     ptr += pointStep
+
             pointsByMessage.append(points)
             tsByMessage.append(np.ones((numPoints), dtype=np.float64) * ts)
+            timeByMessage.append(time_arr)
+            reflectivityByMessage.append(reflectivity)
+            ringByMessage.append(ring)
+            noiseByMessage.append(noise)
+            rangesByMessage.append(ranges)
+
     if not pointsByMessage: # None of the messages contained any points
         return None
-    points = np.concatenate(pointsByMessage)        
-    ts = np.concatenate(tsByMessage)        
-    
+    points = np.concatenate(pointsByMessage)
+    ts = np.concatenate(tsByMessage)
+    time_internal = np.concatenate(timeByMessage)
+    reflectivity = np.concatenate(reflectivityByMessage)
+    ring = np.concatenate(ringByMessage)
+    noise = np.concatenate(noiseByMessage)
+    ranges = np.concatenate(rangesByMessage)
+
+
     # Crop arrays to number of events
     outDict = {
         'ts': ts,
         'point': points,
+        'time': time_internal,
+        'reflectivity': reflectivity,
+        'ring': ring,
+        'noise': noise,
+        'ranges': ranges,
         }
     return outDict
