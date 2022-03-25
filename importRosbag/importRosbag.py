@@ -40,6 +40,7 @@ from struct import unpack
 from struct import error as structError
 from tqdm import tqdm
 
+import time
 # Local imports
 
 from .messageTypes.common import unpackHeader
@@ -53,12 +54,14 @@ from .messageTypes.geometry_msgs_TwistStamped import importTopic as import_geome
 from .messageTypes.sensor_msgs_CameraInfo import importTopic as import_sensor_msgs_CameraInfo
 from .messageTypes.sensor_msgs_Image import importTopic as import_sensor_msgs_Image
 from .messageTypes.sensor_msgs_Imu import importTopic as import_sensor_msgs_Imu
-from .messageTypes.sensor_msgs_PointCloud2 import importTopic as import_sensor_msgs_PointCloud2
+#from .messageTypes.sensor_msgs_PointCloud2 import importTopic as import_sensor_msgs_PointCloud2
+from .messageTypes.sensor_msgs_PointCloud2_testSBJ import importTopic as import_sensor_msgs_PointCloud2
 from .messageTypes.tf_tfMessage import importTopic as import_tf_tfMessage
 
 import logging
     
 def importTopic(topic, **kwargs):
+    time_start = time.time()
     msgs = topic['msgs']
     topicType = topic['type'].replace('/','_')
     if topicType == 'dvs_msgs_EventArray': topicDict = import_dvs_msgs_EventArray(msgs, **kwargs)
@@ -76,6 +79,8 @@ def importTopic(topic, **kwargs):
         return None
     if topicDict:
         topicDict['rosbagType'] = topic['type']
+        elapsed_time = time.time() - time_start
+        print("Tiempo transcurrido: {} segundos".format(elapsed_time))
     return topicDict
 
 def readFile(filePathOrName):

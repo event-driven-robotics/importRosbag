@@ -56,6 +56,14 @@ def unpackRosString(data, ptr):
     ptr += stringLen
     return outStr, ptr
 
+def unpackStringData(data, stringLen, ptr):
+    try:
+        outStr = data[ptr:ptr+stringLen].decode('utf-8')
+    except UnicodeDecodeError:
+        outStr = 'UnicodeDecodeError'
+    ptr += stringLen
+    return outStr, ptr
+
 def unpackRosFloat64Array(data, num, ptr):
     return np.frombuffer(data[ptr:ptr+num*8], dtype=np.float64), ptr+num*8 
     
