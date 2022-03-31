@@ -54,8 +54,7 @@ from .messageTypes.geometry_msgs_TwistStamped import importTopic as import_geome
 from .messageTypes.sensor_msgs_CameraInfo import importTopic as import_sensor_msgs_CameraInfo
 from .messageTypes.sensor_msgs_Image import importTopic as import_sensor_msgs_Image
 from .messageTypes.sensor_msgs_Imu import importTopic as import_sensor_msgs_Imu
-#from .messageTypes.sensor_msgs_PointCloud2 import importTopic as import_sensor_msgs_PointCloud2
-from .messageTypes.sensor_msgs_PointCloud2_testSBJ import importTopic as import_sensor_msgs_PointCloud2
+from .messageTypes.sensor_msgs_PointCloud2 import importTopic as import_sensor_msgs_PointCloud2
 from .messageTypes.tf_tfMessage import importTopic as import_tf_tfMessage
 
 import logging
