@@ -178,7 +178,7 @@ def rekeyConnsByTopic(connDict):
 def importRosbag(filePathOrName, **kwargs):
     global disable_bar
     disable_bar = kwargs.get('disable_bar')
-    loglevel = kwargs.get('log')
+    loglevel = kwargs.get('log', 'INFO')
     numeric_level = getattr(logging, loglevel.upper(), None)
     if not isinstance(numeric_level, int):
         raise ValueError('Invalid log level: %s' % loglevel)
