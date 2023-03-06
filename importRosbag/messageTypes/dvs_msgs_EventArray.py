@@ -64,7 +64,7 @@ def importTopic(msgs, **kwargs):
                dataAsArray[:, 10] * 2**16 + \
                dataAsArray[:, 11] * 2**24).astype(np.float64))
         tsByMessage.append(ts + tns / 1000000000) # Combine timestamp parts, result is in seconds
-        polByMessage.append(dataAsArray[:, 12].astype(np.bool))
+        polByMessage.append(dataAsArray[:, 12].astype(np.bool_))
     outDict = {
         'x': np.concatenate(xByMessage),
         'y': np.concatenate(yByMessage),
