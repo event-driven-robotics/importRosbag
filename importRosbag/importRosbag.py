@@ -147,12 +147,19 @@ def readFile(filePathOrName):
 
 #%% Break chunks into msgs
 
-def breakChunksIntoMsgs(chunks):
+def breakChunksIntoMsgs(chunks, connIdToImport=None):
     global disable_bar
     msgs = [] 
     logging.debug('Breaking chunks into msgs ...')           
     for chunk in tqdm(chunks, position=0, leave=True, disable=disable_bar):
+        if chunk['compression'] == b'lz4':
+            import lz4.frame
+            with lz4.frame.LZ4FrameDecompressor() as decompressor:
+                chunk['data'] = decompressor.decompress(chunk['data'])
         for idx in chunk['ids']:
+            if connIdToImport is not None:
+                if not idx[0] in connIdToImport:
+                    continue
             ptr = idx[2]
             headerLen = unpack('=l', chunk['data'][ptr:ptr+4])[0]
             ptr += 4
@@ -198,14 +205,21 @@ def importRosbag(filePathOrName, **kwargs):
             topic['message_definition'] = topic['message_definition'].decode("utf-8")
             logging.info('    ' + topicKey + ' --- ' + topic['type'])
         return topics
-    msgs = breakChunksIntoMsgs(chunks)
+    
+    importedTopics = {}
+    importTopics = kwargs.get('importTopics')
+    importTypes = kwargs.get('importTypes')
+    
+    if importTopics is not None:
+        connIdToImport = [x['conn'] for x in conns if x['topic'] in importTopics]
+        msgs = breakChunksIntoMsgs(chunks, connIdToImport)
+    else:
+        msgs = breakChunksIntoMsgs(chunks)
+
     for msg in msgs:     
         connDict[msg['conn']]['msgs'].append(msg)
     topics = rekeyConnsByTopic(connDict)
 
-    importedTopics = {}
-    importTopics = kwargs.get('importTopics')
-    importTypes = kwargs.get('importTypes')
     if importTopics is not None:
         for topicToImport in importTopics:
             for topicInFile in list(topics.keys()):
@@ -243,6 +257,5 @@ def importRosbag(filePathOrName, **kwargs):
         for topic in topics.keys():
             logging.info(topic + ' --- ' + topics[topic]['type'])
         logging.info('')
-    
     return importedTopics
 
